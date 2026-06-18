@@ -12,7 +12,7 @@ A self-hosted DevOps learning environment running on Hyper-V.
 - Build a portfolio for DevOps roles in the Netherlands
 
 ## Current Architecture
-
+```
 Windows Gaming PC
 └── Hyper-V
     ├── mgmt01 (Ubuntu)
@@ -20,7 +20,7 @@ Windows Gaming PC
     │   └── Ansible control node
     ├── node01 (Ubuntu)
     └── node02 (Ubuntu)
-
+```
 ## Completed
 
 - Installed Ubuntu management VM
