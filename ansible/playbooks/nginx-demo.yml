@@ -1,0 +1,25 @@
+---
+- name: Deploy nginx containers on nodes
+  hosts: nodes
+  become: true
+
+  tasks:
+    - name: Run nginx on node01
+      community.docker.docker_container:
+        name: nginx_node01
+        image: nginx:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "8081:80"
+      when: inventory_hostname == "node01"
+
+    - name: Run nginx on node02
+      community.docker.docker_container:
+        name: nginx_node02
+        image: nginx:latest
+        state: started
+        restart_policy: always
+        ports:
+          - "8082:80"
+      when: inventory_hostname == "node02"
