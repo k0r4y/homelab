@@ -1,18 +1,19 @@
+---
 - name: Base setup for all nodes
   hosts: node01
   become: true
 
   tasks:
     - name: Update apt cache
-      apt:
-        update_cache: yes
+      ansible.builtin.apt:
+        update_cache: true
 
     - name: Upgrade all packages
-      apt:
+      ansible.builtin.apt:
         upgrade: dist
 
     - name: Install base tools
-      apt:
+      ansible.builtin.apt:
         name:
           - git
           - curl

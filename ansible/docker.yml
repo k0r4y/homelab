@@ -1,7 +1,7 @@
 ---
 - name: Install Docker on all nodes
   hosts: nodes
-  become: yes
+  become: true
 
   roles:
     - docker
