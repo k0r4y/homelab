@@ -1,0 +1,20 @@
+---
+- name: Bootstrap ansible user on all nodes
+  hosts: nodes
+  become: true
+  remote_user: k0r4y   # IMPORTANT: override global ansible_user
+
+  tasks:
+    - name: Ensure ansible user exists
+      ansible.builtin.user:
+        name: ansible
+        shell: /bin/bash
+        create_home: true
+        groups: sudo
+        append: true
+
+    - name: Add SSH key for ansible user
+      ansible.posix.authorized_key:
+        user: ansible
+        key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+        state: present
