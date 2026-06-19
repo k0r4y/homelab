@@ -126,7 +126,8 @@ ansible-playbook \
   -i ansible/inventories/hosts \
   ansible/playbooks/bootstrap-ansible-user.yml \
   --limit nodeXX \
-  --ask-become-pass
+  --ask-become-pass \
+  --ask-pass
 ```
 
 This will:

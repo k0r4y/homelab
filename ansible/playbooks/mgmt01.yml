@@ -1,0 +1,12 @@
+- name: Configure mgmt01
+  hosts: mgmt01
+  become: true
+
+  vars:
+    monitoring_dir: /opt/monitoring
+
+  roles:
+    - common
+    - docker
+    - monitoring
+    - reverse_proxy
