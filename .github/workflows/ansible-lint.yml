@@ -2,7 +2,7 @@ name: Ansible Lint
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
 
 jobs:
@@ -23,8 +23,8 @@ jobs:
           pip install ansible ansible-lint
 
       - name: Install Ansible collections
-  	run: |
-    	ansible-galaxy collection install community.docker
+        run: |
+          ansible-galaxy collection install community.docker
 
       - name: Run ansible-lint
         run: |
