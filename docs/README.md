@@ -70,25 +70,32 @@ This homelab is designed to provide hands-on experience with:
 - Ubuntu worker nodes deployed
 
 ```mermaid
-graph LR
+graph TD
 
-    A["Windows Host / Hyper-V"]
+    subgraph Infrastructure
+        A["Windows Host / Hyper-V"]
+    end
 
-    B["mgmt01<br>192.168.178.24"]
+    subgraph Management
+        B["mgmt01<br>192.168.178.24"]
+        NG["Nginx"]
+        PR["Prometheus"]
+        GF["Grafana"]
+        CA["cAdvisor"]
+    end
 
-    N1["node01<br>192.168.178.25"]
-    N2["node02<br>192.168.178.27"]
+    subgraph Workers
+        N1["node01<br>192.168.178.25"]
+        N2["node02<br>192.168.178.27"]
+    end
 
-    NG["Nginx"]
-    PR["Prometheus"]
-    GF["Grafana"]
-    CA["cAdvisor"]
+    subgraph Services
+        DE1["Docker Engine"]
+        NE1["Node Exporter"]
 
-    DE1["Docker Engine"]
-    DE2["Docker Engine"]
-
-    NE1["Node Exporter"]
-    NE2["Node Exporter"]
+        DE2["Docker Engine"]
+        NE2["Node Exporter"]
+    end
 
     A --> B
 
@@ -106,33 +113,11 @@ graph LR
     N2 --> DE2
     N2 --> NE2
 
-    NE1 -->|9100| PR
-    NE2 -->|9100| PR
-    CA -->|8080| PR
+    NE1 -->|:9100| PR
+    NE2 -->|:9100| PR
+    CA -->|:8080| PR
 
     PR --> GF
-
-    %% Infrastructure
-    style A fill:#E5E7EB,stroke:#4B5563,stroke-width:3px
-
-    %% Management
-    style B fill:#DBEAFE,stroke:#2563EB,stroke-width:3px
-    style NG fill:#DBEAFE,stroke:#2563EB,stroke-width:3px
-
-    %% Worker Nodes
-    style N1 fill:#DCFCE7,stroke:#16A34A,stroke-width:3px
-    style N2 fill:#DCFCE7,stroke:#16A34A,stroke-width:3px
-
-    %% Container Runtime
-    style DE1 fill:#FFEDD5,stroke:#EA580C,stroke-width:3px
-    style DE2 fill:#FFEDD5,stroke:#EA580C,stroke-width:3px
-
-    %% Monitoring Stack
-    style PR fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
-    style GF fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
-    style CA fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
-    style NE1 fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
-    style NE2 fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
 ```
 
 
