@@ -18,3 +18,13 @@
         user: ansible
         key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
         state: present
+
+    - name: Allow ansible user passwordless sudo
+      ansible.builtin.copy:
+        dest: /etc/sudoers.d/ansible
+        content: |
+          ansible ALL=(ALL) NOPASSWD:ALL
+        owner: root
+        group: root
+        mode: "0440"
+        validate: "visudo -cf %s"

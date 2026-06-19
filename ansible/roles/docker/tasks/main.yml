@@ -33,9 +33,10 @@
     state: present
     filename: docker
 
-- name: Update apt cache
+- name: Refresh apt cache after adding Docker repo
   ansible.builtin.apt:
     update_cache: true
+    cache_valid_time: 0
 
 - name: Install Docker Engine
   ansible.builtin.apt:
