@@ -1,38 +1,52 @@
-# Homelab
+## Current Infrastructure
 
-A self-hosted DevOps learning environment running on Hyper-V.
+### Hypervisor
 
-## Goals
+- Windows Host running Hyper-V
 
+### Management Node
 
-- Learn Ansible
-- Learn Docker
-- Learn Kubernetes
-- Learn Azure concepts
-- Build a portfolio for DevOps roles in the Netherlands
+- mgmt01 (192.168.178.24)
+  - SSH management
+  - Ansible control node
+  - Git repository host
+  - Nginx reverse proxy
 
-## Current Architecture
+### Managed Nodes
+
+- node01 (192.168.178.25)
+  - Container Host
+  - Managed via Ansible
+
+- node02 (192.168.178.27)
+  - Container Host
+  - Managed via Ansible
+
+### Architecture
+
+```text
+Windows Host
+│
+├─ Hyper-V
+│   │
+│   ├─ mgmt01 (192.168.178.24)
+│   │   ├─ SSH Management
+│   │   ├─ Ansible Control Node
+│   │   ├─ Git Repository
+│   │   └─ Nginx Reverse Proxy
+│   │
+│   ├─ node01 (192.168.178.25)
+│   │   └─ Docker Engine
+│   │
+│   └─ node02 (192.168.178.27)
+│       └─ Docker Engine
+│
+└─ Browser
+    ├─ http://192.168.178.24/node01/
+    └─ http://192.168.178.24/node02/
 ```
-Windows Gaming PC
-└── Hyper-V
-    ├── mgmt01 (Ubuntu)
-    │   ├── SSH management
-    │   └── Ansible control node
-    ├── node01 (Ubuntu)
-    └── node02 (Ubuntu)
-```
-## Completed
 
-- Installed Ubuntu management VM
-- Configured SSH key authentication
-- Configured Ansible
-- Created Ansible role structure
-- Automated baseline configuration
-- Added second managed node
+### Service Access
 
-## Next Steps
-
-- Docker role
-- Container deployment
-- Monitoring
-- Kubernetes
+- http://192.168.178.24/node01/
+- http://192.168.178.24/node02/
