@@ -69,6 +69,43 @@ This homelab is designed to provide hands-on experience with:
 - Ubuntu management node deployed
 - Ubuntu worker nodes deployed
 
+
+```mermaid
+graph TD
+    A[Windows Host / Hyper-V]
+
+    A --> B[mgmt01<br/>192.168.178.24]
+    A --> C[node01<br/>192.168.178.25]
+    A --> D[node02<br/>192.168.178.27]
+
+    B --> |Ansible| C
+    B --> |Ansible| D
+
+    subgraph mgmt01
+        B1[Nginx Reverse Proxy]
+        B2[Prometheus]
+        B3[Grafana]
+        B4[cAdvisor]
+    end
+
+    subgraph node01
+        C1[Docker Engine]
+        C2[Node Exporter]
+    end
+
+    subgraph node02
+        D1[Docker Engine]
+        D2[Node Exporter]
+    end
+
+    C2 -->|metrics :9100| B2
+    D2 -->|metrics :9100| B2
+    B4 -->|metrics :8080| B2
+    B2 --> B3
+```
+
+
+
 ### Access Management
 
 - SSH key-based authentication configured
@@ -166,8 +203,8 @@ The monitoring stack is hosted on `mgmt01`.
 
 ### Access
 
-- Grafana: http://192.168.178.24:3000
-- Prometheus: http://192.168.178.24:9090
+- Grafana: http://<mgmt01-ip>:3000
+- Prometheus: http://<mgmt02-ip>:9090
 
 ---
 
@@ -186,7 +223,7 @@ The monitoring stack is hosted on `mgmt01`.
 
 ### In Progress
 
-- Docker Compose migration
+
 - Service deployment standardization
 
 ### Planned
@@ -199,6 +236,4 @@ The monitoring stack is hosted on `mgmt01`.
 
 ---
 
-## Learning Objectives
 
-This project is focused on developing practical experience with modern infrastructure management and security operations practices commonly used in professional DevOps, Platform Engineering, System Administration, Cloud Engineering, and SOC environments.
