@@ -69,41 +69,71 @@ This homelab is designed to provide hands-on experience with:
 - Ubuntu management node deployed
 - Ubuntu worker nodes deployed
 
-
 ```mermaid
-graph TD
-    A[Windows Host / Hyper-V]
+graph LR
 
-    A --> B[mgmt01<br/>192.168.178.24]
-    A --> C[node01<br/>192.168.178.25]
-    A --> D[node02<br/>192.168.178.27]
+    A["Windows Host / Hyper-V"]
 
-    B --> |Ansible| C
-    B --> |Ansible| D
+    B["mgmt01<br>192.168.178.24"]
 
-    subgraph mgmt01
-        B1[Nginx Reverse Proxy]
-        B2[Prometheus]
-        B3[Grafana]
-        B4[cAdvisor]
-    end
+    N1["node01<br>192.168.178.25"]
+    N2["node02<br>192.168.178.27"]
 
-    subgraph node01
-        C1[Docker Engine]
-        C2[Node Exporter]
-    end
+    NG["Nginx"]
+    PR["Prometheus"]
+    GF["Grafana"]
+    CA["cAdvisor"]
 
-    subgraph node02
-        D1[Docker Engine]
-        D2[Node Exporter]
-    end
+    DE1["Docker Engine"]
+    DE2["Docker Engine"]
 
-    C2 -->|metrics :9100| B2
-    D2 -->|metrics :9100| B2
-    B4 -->|metrics :8080| B2
-    B2 --> B3
+    NE1["Node Exporter"]
+    NE2["Node Exporter"]
+
+    A --> B
+
+    B --> NG
+    B --> PR
+    B --> GF
+    B --> CA
+
+    B -->|Ansible| N1
+    B -->|Ansible| N2
+
+    N1 --> DE1
+    N1 --> NE1
+
+    N2 --> DE2
+    N2 --> NE2
+
+    NE1 -->|9100| PR
+    NE2 -->|9100| PR
+    CA -->|8080| PR
+
+    PR --> GF
+
+    %% Infrastructure
+    style A fill:#E5E7EB,stroke:#4B5563,stroke-width:3px
+
+    %% Management
+    style B fill:#DBEAFE,stroke:#2563EB,stroke-width:3px
+    style NG fill:#DBEAFE,stroke:#2563EB,stroke-width:3px
+
+    %% Worker Nodes
+    style N1 fill:#DCFCE7,stroke:#16A34A,stroke-width:3px
+    style N2 fill:#DCFCE7,stroke:#16A34A,stroke-width:3px
+
+    %% Container Runtime
+    style DE1 fill:#FFEDD5,stroke:#EA580C,stroke-width:3px
+    style DE2 fill:#FFEDD5,stroke:#EA580C,stroke-width:3px
+
+    %% Monitoring Stack
+    style PR fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
+    style GF fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
+    style CA fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
+    style NE1 fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
+    style NE2 fill:#F3E8FF,stroke:#9333EA,stroke-width:3px
 ```
-
 
 
 ### Access Management
