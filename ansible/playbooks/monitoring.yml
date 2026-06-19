@@ -1,0 +1,6 @@
+- name: Deploy monitoring stack
+  hosts: management
+  vars:
+    monitoring_dir: /opt/monitoring
+  roles:
+    - monitoring
