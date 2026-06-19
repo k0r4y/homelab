@@ -1,0 +1,14 @@
+---
+- name: Pull node_exporter image
+  community.docker.docker_image:
+    name: prom/node-exporter
+    source: pull
+
+- name: Run node_exporter container
+  community.docker.docker_container:
+    name: node-exporter
+    image: prom/node-exporter
+    restart_policy: unless-stopped
+    published_ports:
+      - "9100:9100"
+    state: started
