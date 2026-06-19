@@ -1,8 +1,10 @@
+[management]
+mgmt01 ansible_host=192.168.178.24
 
 [nodes]
 node01 ansible_host=192.168.178.25
 node02 ansible_host=192.168.178.27
 
-[nodes:vars]
+[all:vars]
 ansible_user=ansible
 ansible_python_interpreter=/usr/bin/python3
