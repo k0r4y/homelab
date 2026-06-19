@@ -1,22 +1,23 @@
+---
 - name: Create monitoring directory
-  file:
+  ansible.builtin.file:
     path: "{{ monitoring_dir }}/prometheus"
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Deploy docker-compose.yml
-  template:
+  ansible.builtin.template:
     src: docker-compose.yml.j2
     dest: "{{ monitoring_dir }}/docker-compose.yml"
-    mode: '0644'
-  notify: restart monitoring stack
+    mode: "0644"
+  notify: Restart monitoring stack
 
 - name: Deploy prometheus.yml
-  template:
+  ansible.builtin.template:
     src: prometheus.yml.j2
     dest: "{{ monitoring_dir }}/prometheus/prometheus.yml"
-    mode: '0644'
-  notify: restart monitoring stack
+    mode: "0644"
+  notify: Restart monitoring stack
 
 - name: Start monitoring stack
   community.docker.docker_compose_v2:
