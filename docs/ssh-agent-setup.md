@@ -1,30 +1,93 @@
-# SSH Agent Setup for mgmt01
+# SSH Agent Setup
 
-To support Ansible automation, SSH agent must be running and the key loaded.
+## Overview
 
-## Steps
+This homelab uses SSH key-based authentication for automated infrastructure management from `mgmt01` using Ansible.
 
-Start agent:
+An SSH agent is used to avoid repeatedly loading the private key during automation workflows.
+
+---
+
+## Architecture
+
+```text
+mgmt01 → node01
+       → node02
 ```
-eval "$(ssh-agent -s)"
 
-ssh-add ~/.ssh/id_ed25519
+All automation is executed from `mgmt01`.
+
+---
+
+## Purpose
+
+The SSH agent enables:
+
+- Passwordless Ansible execution
+- Simplified SSH authentication
+- Reliable automation across sessions
+
+---
+
+## Key Management
+
+Private key:
+
+```bash
+~/.ssh/id_ed25519
 ```
 
-eval "$(ssh-agent -s)" starts the SSH agent and connects your current terminal session to it.
+Loaded into an SSH agent during login.
 
+---
 
+## Agent Persistence
 
+The SSH agent is automatically restored via `.bashrc`, ensuring sessions retain authentication state.
 
-=======
-## SSH Authentication Requirement
+---
 
-The control node (mgmt01) requires an active SSH agent with the private key loaded.
+## Verification
 
-Before running Ansible playbooks:
+Check agent connection:
 
-- Ensure SSH agent is running
-- Ensure key is loaded using `ssh-add ~/.ssh/id_ed25519`
+```bash
+echo $SSH_AUTH_SOCK
+```
 
-Without this, Ansible authentication will fail with SSH permission errors.
+Check loaded keys:
 
+```bash
+ssh-add -l
+```
+
+---
+
+## Testing Connectivity
+
+```bash
+ssh ansible@192.168.178.25
+ssh ansible@192.168.178.27
+```
+
+Both hosts should allow passwordless login.
+
+---
+
+## Ansible Validation
+
+```bash
+ansible all -i inventories/hosts -m ping
+```
+
+Expected:
+
+```text
+SUCCESS
+```
+
+---
+
+## Notes
+
+This setup is used by all Ansible automation workflows in the homelab.
