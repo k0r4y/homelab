@@ -1,24 +1,5 @@
 # Architecture
 
-## Overview
-
-This homelab is built on a Windows Hyper-V host and consists of a management node and two managed container hosts.
-
-The management node provides:
-
-- SSH administration
-- Ansible automation
-- Git repository management
-- Nginx reverse proxy services
-
-The managed nodes provide:
-
-- Docker container runtime
-- Application hosting
-- Ansible-managed configuration
-
----
-
 ## Infrastructure Layout
 
 ```text
@@ -31,13 +12,20 @@ Windows Gaming PC
     │   ├── SSH Management
     │   ├── Ansible Control Node
     │   ├── Git Repository
-    │   └── Nginx Reverse Proxy
+    │   ├── Nginx Reverse Proxy
+    │   ├── Prometheus
+    │   ├── Grafana
+    │   └── cAdvisor
     │
     ├── node01 (192.168.178.25)
-    │   └── Docker Engine
+    │   │
+    │   ├── Docker Engine
+    │   └── Node Exporter
     │
     └── node02 (192.168.178.27)
-        └── Docker Engine
+        │
+        ├── Docker Engine
+        └── Node Exporter
 ```
 
 ---
@@ -94,13 +82,37 @@ Nginx Reverse Proxy (mgmt01)
 
 ---
 
+## Monitoring Flow
+
+```text
+node01 (Node Exporter)
+          │
+          │
+          ▼
+      Prometheus
+          ▲
+          │
+          │
+node02 (Node Exporter)
+
+cAdvisor
+    │
+    ▼
+Prometheus
+    │
+    ▼
+Grafana
+```
+
+---
+
 ## Current Services
 
 | Host | Purpose |
 |--------|----------|
-| mgmt01 | SSH, Ansible, Git, Nginx |
-| node01 | Docker Container Host |
-| node02 | Docker Container Host |
+| mgmt01 | SSH, Ansible, Git, Nginx, Prometheus, Grafana, cAdvisor |
+| node01 | Docker Engine, Node Exporter |
+| node02 | Docker Engine, Node Exporter |
 
 ---
 
@@ -108,10 +120,11 @@ Nginx Reverse Proxy (mgmt01)
 
 Planned additions:
 
-- Prometheus monitoring
-- Grafana dashboards
+- Docker Compose deployments
 - Wazuh security monitoring
 - Centralized logging
-- Docker Compose deployments
-- Kubernetes evaluation
+- Kubernetes cluster
+- Azure integration
 - CI/CD pipelines
+- Infrastructure as Code improvements
+- Container orchestration and scaling

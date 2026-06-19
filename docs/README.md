@@ -48,6 +48,13 @@ This homelab is designed to provide hands-on experience with:
 
 - Nginx Reverse Proxy
 
+### Monitoring
+
+- Prometheus
+- Grafana
+- cAdvisor
+- Node Exporter
+
 ### Security
 
 - SSH Key Authentication
@@ -86,6 +93,17 @@ This homelab is designed to provide hands-on experience with:
 - Centralized service access configured
 - Firewall rules configured and validated
 
+### Monitoring
+
+- Node Exporter deployed on node01
+- Node Exporter deployed on node02
+- Prometheus deployed and configured
+- Grafana deployed and configured
+- cAdvisor deployed and configured
+- Infrastructure dashboards imported
+- Container monitoring dashboards imported
+- Monitoring targets validated and healthy
+
 ---
 
 ## Repository Structure
@@ -97,8 +115,14 @@ homelab/
 │   ├── roles/
 │   └── playbooks/
 │
+├── monitoring/
+│   ├── prometheus/
+│   ├── grafana/
+│   └── cadvisor/
+│
 ├── docs/
 │   ├── architecture.md
+│   ├── buildlog.md
 │   ├── ssh-agent-setup.md
 │   ├── docker.md
 │   └── reverse-proxy.md
@@ -113,9 +137,37 @@ homelab/
 | Document | Description |
 |-----------|-------------|
 | architecture.md | Infrastructure architecture and design |
+| buildlog.md | Chronological implementation log |
 | ssh-agent-setup.md | SSH key and agent configuration |
 | docker.md | Docker deployment automation |
 | reverse-proxy.md | Nginx reverse proxy configuration |
+
+---
+
+## Monitoring Stack
+
+The monitoring stack is hosted on `mgmt01`.
+
+### Components
+
+- Prometheus
+- Grafana
+- cAdvisor
+- Node Exporter
+
+### Metrics Collected
+
+- CPU utilization
+- Memory utilization
+- Disk usage
+- Network traffic
+- Docker container metrics
+- Container resource consumption
+
+### Access
+
+- Grafana: http://192.168.178.24:3000
+- Prometheus: http://192.168.178.24:9090
 
 ---
 
@@ -127,23 +179,26 @@ homelab/
 - Ansible automation
 - Docker container hosts
 - Nginx reverse proxy
+- Prometheus monitoring
+- Grafana dashboards
+- cAdvisor container monitoring
+- Node Exporter host monitoring
 
 ### In Progress
 
-- Service deployment automation
-- Monitoring stack
+- Docker Compose migration
+- Service deployment standardization
 
 ### Planned
 
-- Prometheus
-- Grafana
 - Wazuh
 - Centralized logging
 - CI/CD pipelines
-- Kubernetes evaluation
+- Kubernetes cluster
+- Azure integration
 
 ---
 
 ## Learning Objectives
 
-This project is focused on developing practical experience with modern infrastructure management and security operations practices commonly used in professional DevOps, Platform Engineering, and SOC environments.
+This project is focused on developing practical experience with modern infrastructure management and security operations practices commonly used in professional DevOps, Platform Engineering, System Administration, Cloud Engineering, and SOC environments.
