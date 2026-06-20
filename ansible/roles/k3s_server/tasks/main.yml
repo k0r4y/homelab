@@ -1,0 +1,66 @@
+---
+- name: Download k3s install script
+  # Downloads the official k3s installer from rancher
+  # Using get_url ensures idempotency - won't re-download if already present
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: "0755"
+
+- name: Install k3s server
+  # Runs the k3s installer in server mode (control plane + worker)
+  # creates: makes this idempotent - skips if k3s binary already exists
+  ansible.builtin.command:
+    cmd: /tmp/k3s-install.sh
+    creates: /usr/local/bin/k3s
+  environment:
+    INSTALL_K3S_EXEC: "server --disable traefik"
+    # traefik is k3s's default ingress controller
+    # we disable it to keep the install minimal and add our own later if needed
+
+- name: Wait for k3s to be ready
+  # k3s takes a few seconds to start after install
+  # this waits until the node is in Ready state before continuing
+  ansible.builtin.command:
+    cmd: k3s kubectl get nodes
+  register: k3s_ready
+  until: "'Ready' in k3s_ready.stdout"
+  retries: 10
+  delay: 10
+  changed_when: false
+
+- name: Create .kube directory for ansible user
+  ansible.builtin.file:
+    path: /home/ansible/.kube
+    state: directory
+    owner: ansible
+    group: ansible
+    mode: "0700"
+
+- name: Copy kubeconfig for ansible user
+  # Copies the k3s kubeconfig so kubectl works without sudo
+  ansible.builtin.copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /home/ansible/.kube/config
+    owner: ansible
+    group: ansible
+    mode: "0600"
+    remote_src: true
+
+- name: Create .kube directory for k0r4y user
+  ansible.builtin.file:
+    path: /home/k0r4y/.kube
+    state: directory
+    owner: k0r4y
+    group: k0r4y
+    mode: "0700"
+
+- name: Copy kubeconfig for k0r4y user
+  # Copies the k3s kubeconfig so kubectl works without sudo
+  ansible.builtin.copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: /home/k0r4y/.kube/config
+    owner: k0r4y
+    group: k0r4y
+    mode: "0600"
+    remote_src: true

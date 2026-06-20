@@ -1,0 +1,6 @@
+---
+- name: Deploy k3s server
+  hosts: node01
+  become: true
+  roles:
+    - k3s_server

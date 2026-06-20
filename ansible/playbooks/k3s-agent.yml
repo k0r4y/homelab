@@ -1,0 +1,6 @@
+---
+- name: Deploy k3s agent
+  hosts: node02
+  become: true
+  roles:
+    - k3s_agent

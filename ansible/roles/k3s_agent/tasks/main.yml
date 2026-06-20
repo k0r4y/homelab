@@ -1,0 +1,25 @@
+---
+- name: Download k3s install script
+  # Same installer used for server - detects agent mode from environment
+  ansible.builtin.get_url:
+    url: https://get.k3s.io
+    dest: /tmp/k3s-install.sh
+    mode: "0755"
+
+- name: Install k3s agent
+  # Installs k3s in agent mode, connecting to the server on node01
+  # creates: ensures idempotency - skips if already installed
+  ansible.builtin.command:
+    cmd: /tmp/k3s-install.sh
+    creates: /usr/local/bin/k3s
+  environment:
+    INSTALL_K3S_EXEC: "agent"
+    K3S_URL: "https://192.168.178.25:6443"
+    K3S_TOKEN: "{{ k3s_token }}"
+
+- name: Wait for agent to connect
+  # Verifies the agent service is running after install
+  ansible.builtin.systemd:
+    name: k3s-agent
+    state: started
+    enabled: true
