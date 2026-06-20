@@ -1,19 +1,8 @@
 ---
-# Default variables for the Grafana Alloy role
-# These can be overridden in group_vars or inventory if needed
-
-# Alloy version - "latest" is convenient for homelab, consider pinning in production
+# Default variables for Grafana Alloy role
 alloy_version: "latest"
-
-# Configuration and data directories
 alloy_config_dir: /etc/alloy
 alloy_data_dir: /var/lib/alloy
 
-# Loki endpoint - points to Loki running on mgmt01
+# Loki endpoint
 loki_url: "http://localhost:3100/loki/api/v1/push"
-
-# Common labels applied to all logs
-# These help with filtering in Grafana Explore
-alloy_labels:
-  environment: homelab
-  role: "{{ inventory_hostname }}"

@@ -1,7 +1,4 @@
 ---
-# Main tasks file for Grafana Alloy role
-# Deploys Alloy for log collection and forwarding to Loki
-
 - name: Create Alloy directories
   ansible.builtin.file:
     path: "{{ item }}"
@@ -12,29 +9,25 @@
   loop:
     - "{{ alloy_config_dir }}"
     - "{{ alloy_data_dir }}"
-  # These directories store configuration and persistent positions data
 
-- name: Deploy Alloy on mgmt01 (Docker container)
+- name: Deploy Alloy Docker container on mgmt01
   when: inventory_hostname == "mgmt01"
-  block:
-    - name: Deploy Alloy Docker container
-      community.docker.docker_container:
-        name: alloy
-        image: "grafana/alloy:{{ alloy_version }}"
-        restart_policy: unless-stopped
-        state: started
-        privileged: true
-        volumes:
-          - "{{ alloy_config_dir }}/config.alloy:/etc/alloy/config.alloy:ro"
-          - /var/run/docker.sock:/var/run/docker.sock:ro   # Required to discover Docker containers
-          - /var/log:/var/log:ro                            # Access host logs
-          - "{{ alloy_data_dir }}:/var/lib/alloy"          # Persistent positions
-        ports:
-          - "12345:12345"                                   # Alloy UI/metrics port
-        command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
-      # Using Docker on mgmt01 keeps it consistent with existing monitoring stack
+  community.docker.docker_container:
+    name: alloy
+    image: "grafana/alloy:{{ alloy_version }}"
+    restart_policy: unless-stopped
+    state: started
+    privileged: true
+    volumes:
+      - "{{ alloy_config_dir }}/config.alloy:/etc/alloy/config.alloy:ro"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - "{{ alloy_data_dir }}:/var/lib/alloy"
+    ports:
+      - "12345:12345"
+    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
 
-- name: Deploy Alloy configuration file
+- name: Deploy Alloy configuration
   ansible.builtin.template:
     src: config.alloy.j2
     dest: "{{ alloy_config_dir }}/config.alloy"
@@ -42,9 +35,3 @@
     group: root
     mode: "0644"
   notify: Restart Alloy
-  # This is the core configuration using Alloy's River language
-
-- name: Note for non-mgmt01 nodes
-  when: inventory_hostname != "mgmt01"
-  ansible.builtin.debug:
-    msg: "Alloy on worker nodes will be deployed as a systemd service in a future iteration"
