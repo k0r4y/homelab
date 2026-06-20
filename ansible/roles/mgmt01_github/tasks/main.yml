@@ -7,6 +7,12 @@
     group: k0r4y
     mode: "0700"
 
+- name: Add workstation public key to authorized_keys
+  ansible.posix.authorized_key:
+    user: k0r4y
+    key: "{{ workstation_public_key }}"
+    state: present
+
 - name: Deploy GitHub SSH private key
   ansible.builtin.copy:
     content: "{{ github_ssh_private_key }}"
