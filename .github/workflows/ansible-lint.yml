@@ -23,8 +23,9 @@ jobs:
       - name: Install Ansible collections
         run: ansible-galaxy collection install -r ansible/requirements.yml
 
-      - name: Run ansible-lint
+      - name: Run ansible-lint (skip vault files)
         working-directory: ansible
-        run: ansible-lint playbooks/ roles/ --exclude playbooks/test-hosts.yml
-        env:
-          ANSIBLE_VAULT_PASSWORD_FILE: /dev/null
+        run: |
+          # Temporarily remove vault password file from ansible.cfg
+          sed -i 's/^vault_password_file.*//' ansible.cfg
+          ansible-lint playbooks/ roles/ --exclude playbooks/test-hosts.yml
