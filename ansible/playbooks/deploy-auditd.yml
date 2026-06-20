@@ -1,0 +1,43 @@
+# filename: ansible/playbooks/deploy-auditd.yml
+---
+- name: Deploy and Configure Auditd Security Monitoring Engine
+  hosts: all
+  become: true
+  tasks:
+
+    - name: Install auditd daemon and auditing utilities
+      apt:
+        name:
+          - auditd
+          - audispd-plugins
+        state: present
+        update_cache: yes
+
+    - name: Deploy optimized MITRE ATT&CK audit rules policy file
+      copy:
+        dest: /etc/audit/rules.d/audit.rules
+        owner: root
+        group: root
+        mode: '0600'
+        content: |
+          # Delete all existing tracking rules to prevent processing loops
+          -D
+          
+          # Set continuous buffer configurations for high-throughput environments
+          -b 8192
+          
+          # Monitor shell invocations and process execution system calls
+          -a always,exit -F arch=b64 -S execve -k audit-wazuh-execution
+          -a always,exit -F arch=b32 -S execve -k audit-wazuh-execution
+          
+          # Lock the configuration down so rules cannot be modified mid-session
+          -e 1
+      notify: Restart Auditd Service
+
+  handlers:
+    - name: Restart Auditd Service
+      service:
+        name: auditd
+        state: restarted
+        enabled: yes
+
