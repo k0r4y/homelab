@@ -1,146 +1,150 @@
 # Architecture
 
-## Infrastructure Layout
+## Overview
 
-Windows Gaming PC
-│
-└── Hyper-V
-    │
-    ├── mgmt01 (192.168.178.24)
-    │   │
-    │   ├── SSH Management
-    │   ├── Ansible Control Node
-    │   ├── Git Repository
-    │   ├── Nginx Reverse Proxy
-    │   ├── Prometheus
-    │   ├── Grafana
-    │   └── cAdvisor
-    │
-    ├── node01 (192.168.178.25)
-    │   │
-    │   ├── Docker Engine
-    │   ├── k3s Server (control-plane)
-    │   └── Node Exporter (Kubernetes DaemonSet)
-    │
-    └── node02 (192.168.178.27)
-        │
-        ├── Docker Engine
-        ├── k3s Agent (worker)
-        └── Node Exporter (Kubernetes DaemonSet)
+This document describes the physical and logical architecture of the SOC homelab environment.  
+The infrastructure runs on Hyper-V and is fully automated using Ansible with centralized monitoring.
 
+---
 
-## Kubernetes Architecture
+## 1. Physical Infrastructure
 
-┌─────────────────────────────────────┐
-│         k3s Cluster                  │
-│                                       │
-│  ┌─────────────────────────────┐    │
-│  │   node01 (control-plane)    │    │
-│  │  ┌──────────────────────┐  │    │
-│  │  │  Node Exporter       │  │    │
-│  │  │  (DaemonSet)         │  │    │
-│  │  └──────────────────────┘  │    │
-│  └─────────────────────────────┘    │
-│                                       │
-│  ┌─────────────────────────────┐    │
-│  │   node02 (worker)           │    │
-│  │  ┌──────────────────────┐  │    │
-│  │  │  Node Exporter       │  │    │
-│  │  │  (DaemonSet)         │  │    │
-│  │  └──────────────────────┘  │    │
-│  └─────────────────────────────┘    │
-└─────────────────────────────────────┘
+### Hyper-V Layout
 
+    Windows Host (Gaming PC)
+    └── Hyper-V Virtual Switch (External)
+        ├── mgmt01 (192.168.178.24)
+        ├── node01 (192.168.178.25)
+        └── node02 (192.168.178.27)
 
-## Management Flow
+---
 
-Administrator
-      │
-      ▼
-   mgmt01
-      │
-      ├── SSH ─────► node01
-      │
-      └── SSH ─────► node02
+## 2. Logical Architecture
 
+The environment is structured into three layers:
 
-## Ansible Automation Flow
+- Management Layer (mgmt01)
+- Compute Layer (node01, node02)
+- Observability Layer (Prometheus + Grafana)
 
-Ansible Playbooks
+---
+
+## 3. Node Roles
+
+### mgmt01 (192.168.178.24)
+
+- Ansible control node
+- Docker host
+- Prometheus
+- Grafana
+- cAdvisor
+- Nginx reverse proxy
+
+### node01 (192.168.178.25)
+
+- Docker Engine
+- Node Exporter
+
+### node02 (192.168.178.27)
+
+- Docker Engine
+- Node Exporter
+
+---
+
+## 4. Management Flow
+
+    Administrator
         │
         ▼
-      mgmt01
+    mgmt01 (Ansible Control Node)
         │
-        ├── Deploy Docker
-        ├── Manage Configuration
-        ├── Execute Commands
-        │
-        ├──► node01
-        │
-        └──► node02
+        ├── SSH → node01
+        └── SSH → node02
 
+---
 
-## Reverse Proxy Flow
+## 5. Automation Flow (Ansible)
 
-Browser
-   │
-   ▼
-192.168.178.24
-   │
-   ▼
-Nginx Reverse Proxy (mgmt01)
-   │
-   ├── /grafana/ ───► localhost:3000
-   │
-   └── /prometheus/ ───► localhost:9090
+    Ansible Playbooks (mgmt01)
+            │
+            ├── Install Docker
+            ├── Deploy Monitoring Stack
+            ├── Configure Reverse Proxy
+            ├── System Configuration
+            │
+            ├── node01
+            └── node02
 
+---
 
-## Monitoring Flow
+## 6. Container Architecture
 
-node01 (Node Exporter)
-          │
+    mgmt01
+     ├── Prometheus
+     ├── Grafana
+     └── cAdvisor
+
+    node01
+     ├── Docker workloads
+     └── Node Exporter
+
+    node02
+     ├── Docker workloads
+     └── Node Exporter
+
+---
+
+## 7. Network Architecture
+
+    Client Browser
           │
           ▼
-      Prometheus
-          ▲
+    mgmt01 (192.168.178.24)
           │
+          ▼
+    Nginx Reverse Proxy
           │
-node02 (Node Exporter)
+          ├── /grafana    → localhost:3000
+          ├── /prometheus → localhost:9090
+          ├── /node01     → 192.168.178.25
+          └── /node02     → 192.168.178.27
 
-cAdvisor (container metrics)
-    │
-    ▼
-Prometheus
-    │
-    ▼
-Grafana
+---
 
+## 8. Monitoring Flow
 
-## Current Services
+    node01 ─── Node Exporter (:9100)
+    node02 ─── Node Exporter (:9100)
 
-| Host | Purpose | Services |
-|------|---------|----------|
-| mgmt01 | Management Node | SSH, Ansible, Git, Nginx, Prometheus, Grafana, cAdvisor |
-| node01 | Control Plane | Docker, k3s Server, Node Exporter (K8s) |
-| node02 | Worker Node | Docker, k3s Agent, Node Exporter (K8s) |
+                │
+                ▼
+           Prometheus
+                │
+                ▼
+             Grafana
 
+    cAdvisor ─────────────► Prometheus
 
-## Kubernetes Namespaces
+---
 
-| Namespace | Purpose |
-|-----------|---------|
-| monitoring | Observability tools (Node Exporter, future: Prometheus, Grafana) |
-| apps | Application workloads |
-| security | Security tooling (future: Wazuh) |
+## 9. Security Model
 
+- SSH key authentication only
+- Dedicated `ansible` user
+- Passwordless sudo for automation
+- Secrets stored in Ansible Vault
+- No direct exposure of worker nodes
 
-## Future Expansion
+---
 
-Planned additions:
+## 10. Summary
 
-- Wazuh security monitoring
-- Prometheus/Grafana migration to Kubernetes
-- Centralized logging
-- Azure integration
-- CI/CD pipelines improvements
-- Container orchestration and scaling
+This architecture provides:
+
+- Fully automated infrastructure (Ansible)
+- Centralized control plane (mgmt01)
+- Scalable worker nodes
+- Unified monitoring stack
+- Reverse proxy entry layer
+- Rebuildable infrastructure-as-code design
