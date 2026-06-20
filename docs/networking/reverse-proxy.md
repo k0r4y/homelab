@@ -2,60 +2,68 @@
 
 ## Purpose
 
-Provide a single entry point for services running across multiple Docker nodes.
+Provide a single entry point on `mgmt01` for accessing services running across the homelab (monitoring stack, future Wazuh dashboard, etc.).
+
+---
 
 ## Reverse Proxy Host
 
-- mgmt01 (192.168.178.24)
+- **mgmt01** (192.168.178.24)
 
-## Routing
+## Current Routing
 
-```text
-/node01/ -> 192.168.178.25:8081
-/node02/ -> 192.168.178.27:8082
-```
+| Path              | Backend                        | Purpose |
+|-------------------|--------------------------------|---------|
+| `/grafana/`       | `localhost:3000`               | Grafana UI |
+| `/prometheus/`    | `localhost:9090`               | Prometheus UI |
 
-## Traffic Flow
+---
 
-```text
-Client Browser
-        │
-        ▼
-mgmt01 (Nginx Reverse Proxy)
-        │
-        ├── node01 (192.168.178.25:8081)
-        │
-        └── node02 (192.168.178.27:8082)
-```
+## Configuration
 
-## Firewall Configuration
+Nginx configuration is managed via the `reverse_proxy` Ansible role.
 
-Allow HTTP traffic:
+Location: `ansible/roles/reverse_proxy/templates/nginx.conf.j2`
 
-```bash
-sudo ufw allow 80/tcp
-```
+---
 
-Verify firewall status:
+## Deployment
 
-```bash
-sudo ufw status
-```
+Apply changes with:
+
+    ansible-playbook \
+      -i ansible/inventories/hosts \
+      ansible/playbooks/mgmt01.yml \
+      --limit mgmt01
+
+---
+
+## Future Enhancements
+
+- `/wazuh/` → node03 Wazuh Dashboard
+- `/k8s/` or hostname-based routing for Kubernetes Ingress
+- TLS termination with Let's Encrypt / cert-manager
+
+---
 
 ## Validation
 
-Test node01:
+From any browser or curl:
 
-```bash
-curl http://192.168.178.24/node01/
-```
+    curl -I http://192.168.178.24/grafana/
+    curl -I http://192.168.178.24/prometheus/
 
-Test node02:
+Expected: HTTP 200 responses.
 
-```bash
-curl http://192.168.178.24/node02/
-```
+---
 
-Expected result:
+## Firewall
 
-Both routes should return content served from their respective backend nodes.
+Ensure HTTP traffic is allowed:
+
+    sudo ufw allow 80/tcp
+    sudo ufw status
+
+---
+
+This reverse proxy keeps the homelab accessible through a clean, centralized URL structure.
