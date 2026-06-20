@@ -2,50 +2,50 @@
 - name: Install Wazuh agents
   hosts: wazuh_agents
   become: true
+  handlers:
+    - name: Restart wazuh-agent
+      ansible.builtin.systemd:
+        name: wazuh-agent
+        state: restarted
+
   tasks:
     - name: Install dependencies
-      apt:
+      ansible.builtin.apt:
         name: curl
         state: present
         update_cache: true
 
     - name: Copy Wazuh agent .deb package
-      copy:
+      ansible.builtin.copy:
         src: /home/k0r4y/homelab/ansible/wazuh-agent_4.14.5-1_amd64.deb
         dest: /tmp/wazuh-agent.deb
-        mode: 0644
+        mode: "0644"
 
     - name: Install Wazuh agent
-      apt:
+      ansible.builtin.apt:
         deb: /tmp/wazuh-agent.deb
         state: present
 
     - name: Configure manager IP in ossec.conf
-      replace:
+      ansible.builtin.replace:
         path: /var/ossec/etc/ossec.conf
         regexp: '<address>192.168.178.24</address>'
         replace: '<address>192.168.178.28</address>'
-      register: config_changed
+      notify: Restart wazuh-agent
 
     - name: Remove temporary .deb file
-      file:
+      ansible.builtin.file:
         path: /tmp/wazuh-agent.deb
         state: absent
 
-    - name: Restart agent if config changed
-      systemd:
-        name: wazuh-agent
-        state: restarted
-      when: config_changed.changed
-
     - name: Start and enable Wazuh agent
-      systemd:
+      ansible.builtin.systemd:
         name: wazuh-agent
         state: started
         enabled: true
 
     - name: Verify agent status
-      command: systemctl is-active wazuh-agent
+      ansible.builtin.command: systemctl is-active wazuh-agent
       register: agent_status
       changed_when: false
       failed_when: agent_status.stdout != "active"
