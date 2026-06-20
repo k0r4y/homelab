@@ -1,4 +1,5 @@
 # Loki single-node configuration for homelab
+
 auth_enabled: false
 
 server:
@@ -29,3 +30,4 @@ schema_config:
 limits_config:
   ingestion_rate_mb: 4
   ingestion_burst_size_mb: 6
+  allow_structured_metadata: false

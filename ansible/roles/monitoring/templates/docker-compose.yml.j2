@@ -16,7 +16,7 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-
+      - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor

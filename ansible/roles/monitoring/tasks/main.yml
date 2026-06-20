@@ -44,3 +44,16 @@
 - name: Reminder - Add Loki datasource in Grafana
   ansible.builtin.debug:
     msg: "Add Loki datasource manually in Grafana at http://localhost:3100"
+
+- name: Create Grafana provisioning directory structure
+  file:
+    path: /opt/monitoring/grafana/provisioning/datasources
+    state: directory
+    mode: '0755'
+
+- name: Deploy Grafana datasources configuration
+  template:
+    src: datasources.yml.j2
+    dest: /opt/monitoring/grafana/provisioning/datasources/datasources.yml
+    mode: '0644'
+  notify: Restart monitoring stack
