@@ -3,3 +3,4 @@
 .vscode/
 *.swp
 *.bak
+.vault_pass
