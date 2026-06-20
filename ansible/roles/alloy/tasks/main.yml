@@ -1,4 +1,8 @@
 ---
+# ===============================
+# Alloy deployment (clean + stable)
+# ===============================
+
 - name: Create Alloy directories
   ansible.builtin.file:
     path: "{{ item }}"
@@ -10,11 +14,9 @@
     - "{{ alloy_config_dir }}"
     - "{{ alloy_data_dir }}"
 
-- name: Ensure config.alloy is not a directory (clean state)
-  ansible.builtin.file:
-    path: "{{ alloy_config_dir }}/config.alloy"
-    state: absent
-
+# -------------------------------
+# Deploy Alloy configuration file
+# -------------------------------
 - name: Deploy Alloy configuration
   ansible.builtin.template:
     src: config.alloy.j2
@@ -24,6 +26,9 @@
     mode: "0644"
     force: true
 
+# -------------------------------
+# Run Alloy container
+# -------------------------------
 - name: Deploy Alloy Docker container on mgmt01
   when: inventory_hostname == "mgmt01"
   community.docker.docker_container:
@@ -34,17 +39,23 @@
     privileged: true
     recreate: true
 
-    # IMPORTANT: same network as Loki/Grafana/Prometheus
+    # Attach to same Docker network as Grafana/Loki/Prometheus
     networks:
       - name: monitoring_default
 
+    # Mount config + log sources
     volumes:
       - "{{ alloy_config_dir }}/config.alloy:/etc/alloy/config.alloy:ro"
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /var/log:/var/log:ro
       - "{{ alloy_data_dir }}:/var/lib/alloy"
 
+    # Alloy UI / metrics endpoint
     ports:
       - "12345:12345"
 
-    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+    # Start Alloy with config file
+    command: >
+      run
+      --server.http.listen-addr=0.0.0.0:12345
+      /etc/alloy/config.alloy
