@@ -49,9 +49,9 @@
     enabled: true
     state: started
 
-- name: Add ansible user to docker group
+- name: Add users to docker group
   ansible.builtin.user:
-    name: ansible
+    name: "{{ item }}"
     groups: docker
     append: true
-  when: ansible_user == 'ansible'
+  loop: "{{ docker_users }}"
