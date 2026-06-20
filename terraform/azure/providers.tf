@@ -10,6 +10,15 @@ terraform {
       version = "~> 4.0"
     }
   }
+ 
+  # Remote backend - stores terraform.tfstate in Azure Blob Storage
+  # This means state is preserved even if mgmt01 is rebuilt
+  backend "azurerm" {
+    resource_group_name  = "terraform-state-rg"
+    storage_account_name = "homelabtfstate2778"
+    container_name       = "tfstate"
+    key                  = "homelab.tfstate"
+  }
 }
 
 provider "azurerm" {
