@@ -10,22 +10,10 @@
     - "{{ alloy_config_dir }}"
     - "{{ alloy_data_dir }}"
 
-- name: Deploy Alloy Docker container on mgmt01
-  when: inventory_hostname == "mgmt01"
-  community.docker.docker_container:
-    name: alloy
-    image: "grafana/alloy:{{ alloy_version }}"
-    restart_policy: unless-stopped
-    state: started
-    privileged: true
-    volumes:
-      - "{{ alloy_config_dir }}/config.alloy:/etc/alloy/config.alloy:ro"
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /var/log:/var/log:ro
-      - "{{ alloy_data_dir }}:/var/lib/alloy"
-    ports:
-      - "12345:12345"
-    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy
+- name: Ensure config.alloy is not a directory (clean state)
+  ansible.builtin.file:
+    path: "{{ alloy_config_dir }}/config.alloy"
+    state: absent
 
 - name: Deploy Alloy configuration
   ansible.builtin.template:
@@ -34,4 +22,29 @@
     owner: root
     group: root
     mode: "0644"
-  notify: Restart Alloy
+    force: true
+
+- name: Deploy Alloy Docker container on mgmt01
+  when: inventory_hostname == "mgmt01"
+  community.docker.docker_container:
+    name: alloy
+    image: "grafana/alloy:{{ alloy_version }}"
+    restart_policy: unless-stopped
+    state: started
+    privileged: true
+    recreate: true
+
+    # IMPORTANT: same network as Loki/Grafana/Prometheus
+    networks:
+      - name: monitoring_default
+
+    volumes:
+      - "{{ alloy_config_dir }}/config.alloy:/etc/alloy/config.alloy:ro"
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/log:/var/log:ro
+      - "{{ alloy_data_dir }}:/var/lib/alloy"
+
+    ports:
+      - "12345:12345"
+
+    command: run --server.http.listen-addr=0.0.0.0:12345 /etc/alloy/config.alloy

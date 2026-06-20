@@ -9,4 +9,5 @@
     - common
     - docker
     - monitoring
+    - alloy
     - reverse_proxy

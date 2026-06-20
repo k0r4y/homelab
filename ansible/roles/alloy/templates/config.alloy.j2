@@ -1,4 +1,5 @@
 // Grafana Alloy Configuration
+
 logging {
   level = "info"
 }
@@ -9,26 +10,40 @@ loki.write "homelab_loki" {
   }
 }
 
-loki.source.journal "system_journal" {
-  labels = {
-    job  = "systemd"
-    host = "{{ inventory_hostname }}"
-  }
-}
-
 discovery.docker "containers" {
   host = "unix:///var/run/docker.sock"
 }
 
-loki.source.docker "docker_logs" {
-  host    = "unix:///var/run/docker.sock"
-  targets = discovery.docker.containers.targets
+//
+// SYSTEMD LOGS
+//
+loki.source.journal "system_journal" {
   labels = {
-    job       = "docker"
-    host      = "{{ inventory_hostname }}"
-    container = "__meta_docker_container_name"
+    job  = "systemd",
+    host = "{{ inventory_hostname }}",
   }
+
   forward_to = [loki.write.homelab_loki.receiver]
 }
 
+//
+// DOCKER LOGS
+//
+loki.source.docker "docker_logs" {
+  host    = "unix:///var/run/docker.sock"
+  targets = discovery.docker.containers.targets
+
+  labels = {
+    job     = "docker",
+    host    = "{{ inventory_hostname }}",
+    container = "__meta_docker_container_name",
+    image     = "__meta_docker_container_image",
+  }
+
+  forward_to = [loki.write.homelab_loki.receiver]
+}
+
+//
+// SELF MONITORING (optional but useful)
+//
 prometheus.exporter.self "alloy" {}
