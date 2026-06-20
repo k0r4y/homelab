@@ -100,6 +100,10 @@
       ansible.builtin.include_role:
         name: common
 
+    - name: Run hosts role
+      ansible.builtin.include_role:
+        name: mgmt01_hosts
+
     - name: Run GitHub SSH role
       ansible.builtin.include_role:
         name: mgmt01_github

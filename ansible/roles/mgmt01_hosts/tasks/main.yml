@@ -1,0 +1,22 @@
+---
+# Role: mgmt01_hosts
+# Purpose: Ensure mgmt01 has correct hostname resolution for all nodes
+# This prevents SSH failures after rebuilds
+
+- name: Ensure /etc/hosts has node entries
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    line: "{{ item }}"
+    state: present
+    create: true
+    owner: root
+    group: root
+    mode: '0644'
+  loop:
+    - "192.168.178.25 node01"
+    - "192.168.178.27 node02"
+  loop_control:
+    label: "{{ item }}"
+  tags:
+    - hosts
+    - always

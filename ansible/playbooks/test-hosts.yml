@@ -1,0 +1,6 @@
+---
+- name: Test hosts role
+  hosts: mgmt01
+  become: true
+  roles:
+    - mgmt01_hosts
