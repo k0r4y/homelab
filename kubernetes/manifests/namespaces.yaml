@@ -1,0 +1,26 @@
+---
+# monitoring namespace - for Prometheus, Grafana, and related tools
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: monitoring
+  labels:
+    purpose: observability
+
+---
+# apps namespace - for application workloads
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: apps
+  labels:
+    purpose: applications
+
+---
+# security namespace - for Wazuh and security tooling later
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: security
+  labels:
+    purpose: security
