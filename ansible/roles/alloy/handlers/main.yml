@@ -2,5 +2,6 @@
 - name: Restart Alloy
   community.docker.docker_container:
     name: alloy
-    state: restarted
+    state: started
+    recreate: true
   when: inventory_hostname == "mgmt01"

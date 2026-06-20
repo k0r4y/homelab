@@ -1,7 +1,6 @@
 ---
 # Main tasks for the monitoring stack
-# Now includes Prometheus, Grafana, cAdvisor, and Loki
-
+# Includes Prometheus, Grafana, cAdvisor, Loki
 - name: Create monitoring base directory
   ansible.builtin.file:
     path: "{{ monitoring_dir }}"
@@ -10,10 +9,9 @@
 
 - name: Create Loki data directory
   ansible.builtin.file:
-    path: "{{ loki_data_dir }}"
+    path: "{{ monitoring_loki_data_dir }}"
     state: directory
     mode: "0755"
-  # Persistent storage for Loki chunks and indexes
 
 - name: Deploy docker-compose.yml
   ansible.builtin.template:
@@ -41,19 +39,15 @@
     project_src: "{{ monitoring_dir }}"
     state: present
 
-- name: Reminder - Add Loki datasource in Grafana
-  ansible.builtin.debug:
-    msg: "Add Loki datasource manually in Grafana at http://localhost:3100"
-
 - name: Create Grafana provisioning directory structure
-  file:
+  ansible.builtin.file:
     path: /opt/monitoring/grafana/provisioning/datasources
     state: directory
-    mode: '0755'
+    mode: "0755"
 
 - name: Deploy Grafana datasources configuration
-  template:
+  ansible.builtin.template:
     src: datasources.yml.j2
     dest: /opt/monitoring/grafana/provisioning/datasources/datasources.yml
-    mode: '0644'
+    mode: "0644"
   notify: Restart monitoring stack

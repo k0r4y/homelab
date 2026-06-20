@@ -17,6 +17,7 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
       - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning
+
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
@@ -30,16 +31,15 @@ services:
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
 
-  # Loki - Centralized log aggregation
   loki:
     image: grafana/loki:3.0.0
     container_name: loki
     restart: unless-stopped
     ports:
-      - "{{ loki_http_port }}:3100"
+      - "{{ monitoring_loki_http_port }}:3100"
     volumes:
       - {{ monitoring_dir }}/loki-config.yaml:/etc/loki/local-config.yaml
-      - {{ loki_data_dir }}:/loki
+      - {{ monitoring_loki_data_dir }}:/loki
     command: -config.file=/etc/loki/local-config.yaml
 
 volumes:

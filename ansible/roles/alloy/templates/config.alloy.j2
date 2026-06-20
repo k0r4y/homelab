@@ -28,7 +28,7 @@ loki.source.journal "system_journal" {
 
 loki.write "homelab_loki" {
   endpoint {
-    url = "{{ loki_url }}"
+    url = "{{ alloy_loki_url }}"
   }
 }
 
