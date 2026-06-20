@@ -1,0 +1,59 @@
+// Grafana Alloy Configuration (River language)
+// This file defines log sources and forwarding to Loki
+
+// Logging level for Alloy itself
+logging {
+  level = "info"
+}
+
+// Loki write destination - sends all collected logs to Loki
+loki.write "homelab_loki" {
+  endpoint {
+    url = "{{ loki_url }}"
+  }
+}
+
+// =============================================
+// SYSTEM JOURNAL LOGS (systemd)
+// =============================================
+loki.source.journal "system_journal" {
+  format_as_json = true
+  
+  labels = {
+    job    = "systemd"
+    host   = "{{ inventory_hostname }}"
+    source = "journal"
+  }
+}
+
+loki.process "journal_pipeline" {
+  stage.json {
+    expressions = {
+      msg = "MESSAGE"
+    }
+  }
+  forward_to = [loki.write.homelab_loki.receiver]
+}
+
+// =============================================
+// DOCKER CONTAINER LOGS
+// =============================================
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+loki.source.docker "docker_logs" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.docker.containers.targets
+  
+  labels = {
+    job       = "docker"
+    host      = "{{ inventory_hostname }}"
+    container = "__meta_docker_container_name"
+  }
+  
+  forward_to = [loki.write.homelab_loki.receiver]
+}
+
+// Expose Alloy's own metrics (for Prometheus scraping)
+prometheus.exporter.self "alloy" {}

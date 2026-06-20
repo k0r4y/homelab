@@ -1,0 +1,9 @@
+---
+# Handlers for the Alloy role
+
+- name: Restart Alloy
+  community.docker.docker_container:
+    name: alloy
+    state: restarted
+  when: inventory_hostname == "mgmt01"
+  # Restarts only on mgmt01 where Alloy runs in Docker

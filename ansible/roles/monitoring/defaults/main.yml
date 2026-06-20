@@ -1,0 +1,10 @@
+---
+# Default variables for the monitoring role
+# Extended to support Loki
+
+monitoring_dir: /opt/monitoring
+
+# Loki configuration
+loki_version: "latest"
+loki_http_port: 3100
+loki_data_dir: "{{ monitoring_dir }}/loki"
