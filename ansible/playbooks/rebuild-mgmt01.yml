@@ -3,77 +3,82 @@
   hosts: mgmt01
   become: true
   gather_facts: true
-
   vars:
     # Controls whether destructive actions (wipe/recreate) are enabled
+    # Set to true only when a full clean slate is required
     wipe_data: false
-
     # Base directory where Prometheus + Grafana stack is deployed
     monitoring_dir: /opt/monitoring
-
     # Base directory where reverse proxy configs are stored
     reverse_proxy_dir: /opt/reverse_proxy
 
   pre_tasks:
+    # -------------------------
+    # SAFETY CHECK
+    # Prevents this playbook from accidentally running on the wrong host
+    # -------------------------
     - name: Safety check - only run on mgmt01
-      # Ensures this playbook cannot accidentally run on another host
       ansible.builtin.assert:
         that:
           - inventory_hostname == "mgmt01"
         fail_msg: "This playbook can only run on mgmt01"
         success_msg: "Safety check passed"
 
-  tasks:
-
     # -------------------------
     # WIPE PHASE (OPTIONAL)
-    # This section is only executed when wipe_data = true
-    # It is designed for "full reset" scenarios
+    # Only executes when wipe_data is set to true
+    # Designed for full reset scenarios where a clean slate is needed
     # -------------------------
 
     - name: Get Docker container info
-      # Queries Docker daemon for all container metadata
-      # Used as the source of truth for cleanup operations
+      # Queries the Docker daemon for all container metadata
+      # Result is used as the source of truth for cleanup operations
       community.docker.docker_host_info:
+        containers: true
       register: docker_info
       when: wipe_data | bool
 
     - name: Normalize container list
-      # Extracts only container names from Docker metadata
-      # Ensures downstream tasks work with a simple list of strings
+      # Extracts container names from Docker metadata into a flat list
+      # Strips leading slash from container names (Docker returns /name format)
+      # Ensures downstream tasks work with simple strings
       ansible.builtin.set_fact:
         container_names: >-
           {{
             docker_info.containers
             | default([])
-            | map(attribute='Name')
+            | map(attribute='Names')
+            | flatten
+            | map('regex_replace', '^/', '')
             | list
           }}
       when: wipe_data | bool
 
     - name: Stop all containers (safe)
-      # Gracefully stops running containers before deletion
-      # Prevents corruption or abrupt shutdown of services
+      # Gracefully stops each running container before removal
+      # failed_when: false ensures a already-stopped container does not abort the play
       community.docker.docker_container:
         name: "{{ item }}"
         state: stopped
       loop: "{{ container_names | default([]) }}"
       when: wipe_data | bool
-      ignore_errors: true
+      failed_when: false
 
     - name: Remove all containers (clean slate)
-      # Deletes containers after they have been stopped
-      # This does NOT remove volumes unless explicitly configured elsewhere
+      # Deletes each container after it has been stopped
+      # Does not remove named volumes - persistent data is preserved unless
+      # the wipe_data directories are explicitly deleted in the next task
       community.docker.docker_container:
         name: "{{ item }}"
         state: absent
       loop: "{{ container_names | default([]) }}"
       when: wipe_data | bool
-      ignore_errors: true
+      failed_when: false
 
     - name: Wipe data directories (DANGEROUS)
-      # WARNING: This permanently deletes persistent application data
+      # Permanently deletes persistent application data directories
       # Includes Grafana dashboards, Prometheus data, and proxy configs
+      # Only runs when wipe_data is explicitly set to true
       ansible.builtin.file:
         path: "{{ item }}"
         state: absent
@@ -82,52 +87,56 @@
         - "{{ reverse_proxy_dir }}"
       when: wipe_data | bool
 
+  tasks:
     # -------------------------
     # BASE SYSTEM SETUP
-    # This ensures the host has all required base dependencies
+    # Ensures the host has all required system dependencies
     # -------------------------
 
     - name: Run common role
       # Applies baseline system configuration:
       # - updates packages
-      # - installs base tools
-      # - sets system defaults
+      # - installs base tools (git, curl, vim, etc.)
       ansible.builtin.include_role:
         name: common
 
     - name: Run docker role
       # Installs and configures Docker Engine
-      # Also ensures Docker service is enabled and running
+      # Ensures Docker service is enabled and running
       ansible.builtin.include_role:
         name: docker
 
     # -------------------------
-    # SERVICES DEPLOYMENT
-    # This layer deploys application services on top of Docker
+    # SERVICE DEPLOYMENT
+    # Deploys application services on top of Docker
     # -------------------------
 
     - name: Run monitoring role
-      # Deploys Prometheus + Grafana stack via Docker Compose
+      # Deploys Prometheus + Grafana + cAdvisor stack via Docker Compose
+      # Generates prometheus.yml dynamically from Ansible inventory
       ansible.builtin.include_role:
         name: monitoring
 
     - name: Run reverse proxy role
-      # Configures nginx reverse proxy for service routing
+      # Configures nginx as a reverse proxy for service routing
+      # Deploys nginx config from Jinja2 template
       ansible.builtin.include_role:
         name: reverse_proxy
 
     - name: Run node exporter role
-      # Deploys node_exporter for system metrics (Prometheus scraping)
+      # Deploys node_exporter container for host metrics collection
+      # Exposes metrics on port 9100 for Prometheus scraping
       ansible.builtin.include_role:
         name: node_exporter
 
     # -------------------------
-    # VERIFY SYSTEM HEALTH
-    # This confirms services are actually reachable after deployment
+    # HEALTH CHECKS
+    # Confirms services are reachable after deployment
+    # Retries up to 5 times with 5 second delay between attempts
     # -------------------------
 
     - name: Verify Grafana is reachable
-      # HTTP health check for Grafana UI availability
+      # HTTP check confirming Grafana UI is available on port 3000
       ansible.builtin.uri:
         url: http://localhost:3000
         status_code: 200
@@ -137,7 +146,7 @@
       until: grafana_check.status == 200
 
     - name: Verify nginx is reachable
-      # HTTP health check for reverse proxy availability
+      # HTTP check confirming nginx reverse proxy is available on port 80
       ansible.builtin.uri:
         url: http://localhost
         status_code: 200

@@ -9,19 +9,20 @@
   ansible.builtin.template:
     src: nginx.conf.j2
     dest: /etc/nginx/sites-available/soc-lab
+    mode: '0644'
   notify: Reload nginx
 
 - name: Ensure nginx config exists before enabling
   ansible.builtin.stat:
     path: /etc/nginx/sites-available/soc-lab
-  register: nginx_conf
+  register: reverse_proxy_nginx_conf
 
 - name: Enable site
   ansible.builtin.file:
     src: /etc/nginx/sites-available/soc-lab
     dest: /etc/nginx/sites-enabled/soc-lab
     state: link
-  when: nginx_conf.stat.exists
+  when: reverse_proxy_nginx_conf.stat.exists
   notify: Reload nginx
 
 - name: Remove default site
