@@ -2,10 +2,14 @@
 - name: Bootstrap ansible user on all nodes
   hosts: nodes
   become: true
-  remote_user: k0r4y   # IMPORTANT: override global ansible_user
-
+  # Use k0r4y as the initial connection user during bootstrap
+  # This is overridden here because ansible user doesn't exist yet on fresh nodes
+  remote_user: k0r4y
   tasks:
+
     - name: Ensure ansible user exists
+      # Creates a dedicated automation user separate from the admin user
+      # Adding to sudo group allows privilege escalation for Ansible tasks
       ansible.builtin.user:
         name: ansible
         shell: /bin/bash
@@ -14,12 +18,19 @@
         append: true
 
     - name: Add SSH key for ansible user
+      # Authorizes the mgmt01 SSH key for the ansible user
+      # Uses the key stored in Ansible Vault via group_vars
+      # This means re-running bootstrap after a mgmt01 rebuild automatically
+      # updates the authorized key on all nodes to match the new mgmt01 key
       ansible.posix.authorized_key:
         user: ansible
-        key: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+        key: "{{ github_ssh_public_key }}"
         state: present
 
     - name: Allow ansible user passwordless sudo
+      # Grants the ansible user passwordless sudo access
+      # Required for Ansible to run privileged tasks without prompting
+      # Uses visudo validate to prevent syntax errors that could lock out sudo
       ansible.builtin.copy:
         dest: /etc/sudoers.d/ansible
         content: |
