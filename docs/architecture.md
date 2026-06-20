@@ -114,17 +114,18 @@ The environment is structured into three layers:
 
 ## 8. Monitoring Flow
 
-    node01 ─── Node Exporter (:9100)
-    node02 ─── Node Exporter (:9100)
-
-                │
-                ▼
-           Prometheus
-                │
-                ▼
-             Grafana
-
-    cAdvisor ─────────────► Prometheus
+node01 (192.168.178.25)
+    └── Node Exporter (:9100)
+            │
+node02 (192.168.178.27)
+    └── Node Exporter (:9100)
+            │
+            ▼
+      Prometheus (:9090)
+            │
+            │ (HTTP query API :9090)
+            ▼
+     Grafana (:3000)
 
 ---
 

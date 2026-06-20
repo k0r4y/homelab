@@ -1,0 +1,22 @@
+---
+- name: Deploy Wazuh on node03
+  hosts: node03
+  become: true
+
+  tasks:
+    - name: Download Wazuh installer
+      ansible.builtin.get_url:
+        url: https://packages.wazuh.com/4.10.1/wazuh-install.sh
+        dest: /tmp/wazuh-install.sh
+        mode: "0755"
+
+    - name: Run Wazuh all-in-one installation
+      ansible.builtin.command:
+        cmd: /tmp/wazuh-install.sh --generate-config-files
+        creates: /var/ossec/etc/ossec.conf
+      register: wazuh_generate
+
+    - name: Run Wazuh installation
+      ansible.builtin.command:
+        cmd: /tmp/wazuh-install.sh --wazuh-indexer node-1 --wazuh-server wazuh-1 --wazuh-dashboard dashboard --start-cluster
+        creates: /var/ossec/bin/wazuh-control
