@@ -5,6 +5,7 @@ mgmt01 ansible_host=192.168.178.24 ansible_connection=local ansible_user=k0r4y
 [nodes]
 node01 ansible_host=192.168.178.25 
 node02 ansible_host=192.168.178.27
+node03 ansible_host=192.168.178.28
 
 [all:vars]
 ansible_user=ansible
