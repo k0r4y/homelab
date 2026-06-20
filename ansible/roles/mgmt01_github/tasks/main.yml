@@ -1,0 +1,48 @@
+---
+- name: Ensure .ssh directory exists
+  ansible.builtin.file:
+    path: /home/k0r4y/.ssh
+    state: directory
+    owner: k0r4y
+    group: k0r4y
+    mode: "0700"
+
+- name: Deploy GitHub SSH private key
+  ansible.builtin.copy:
+    content: "{{ github_ssh_private_key }}"
+    dest: /home/k0r4y/.ssh/id_ed25519
+    owner: k0r4y
+    group: k0r4y
+    mode: "0600"
+
+- name: Deploy GitHub SSH public key
+  ansible.builtin.copy:
+    content: "{{ github_ssh_public_key }}"
+    dest: /home/k0r4y/.ssh/id_ed25519.pub
+    owner: k0r4y
+    group: k0r4y
+    mode: "0644"
+
+- name: Add GitHub to known hosts
+  ansible.builtin.known_hosts:
+    name: github.com
+    key: "{{ lookup('pipe', 'ssh-keyscan github.com 2>/dev/null') }}"
+    state: present
+
+- name: Configure git user name
+  community.general.git_config:
+    name: user.name
+    scope: global
+    value: k0r4y
+
+- name: Configure git user email
+  community.general.git_config:
+    name: user.email
+    scope: global
+    value: "{{ git_user_email }}"
+
+- name: Configure git remote to use SSH
+  community.general.git_config:
+    name: url.git@github.com:.insteadOf
+    scope: global
+    value: https://github.com/
