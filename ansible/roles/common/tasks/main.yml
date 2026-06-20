@@ -17,3 +17,7 @@
       - tree
       - jq
     state: present
+
+- name: Set timezone to Amsterdam
+  community.general.timezone:
+    name: Europe/Amsterdam
