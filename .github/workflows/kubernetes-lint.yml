@@ -1,0 +1,33 @@
+---
+# GitHub Action: Kubernetes Manifest Validation
+# This workflow runs on every push and PR to validate Kubernetes YAML files
+
+name: Kubernetes Lint
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "kubernetes/manifests/**"  # Only run when manifest files change
+  pull_request:
+    paths:
+      - "kubernetes/manifests/**"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install kubeconform
+        run: |
+          curl -L https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate Kubernetes manifests
+        run: |
+          # Validate all YAML files in kubernetes/manifests/
+          # Exit with error if any manifest is invalid
+          find kubernetes/manifests -name "*.yaml" -exec kubeconform {} \;
