@@ -19,12 +19,10 @@
     # we disable it to keep the install minimal and add our own later if needed
 
 - name: Wait for k3s to be ready
-  # k3s takes a few seconds to start after install
-  # this waits until the node is in Ready state before continuing
   ansible.builtin.command:
     cmd: k3s kubectl get nodes
-  register: k3s_ready
-  until: "'Ready' in k3s_ready.stdout"
+  register: k3s_server_ready
+  until: "'Ready' in k3s_server_ready.stdout"
   retries: 10
   delay: 10
   changed_when: false

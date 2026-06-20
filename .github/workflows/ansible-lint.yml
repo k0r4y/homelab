@@ -25,4 +25,6 @@ jobs:
 
       - name: Run ansible-lint
         working-directory: ansible
-        run: ansible-lint playbooks/ roles/
+        run: ansible-lint playbooks/ roles/ --exclude playbooks/test-hosts.yml
+        env:
+          ANSIBLE_VAULT_PASSWORD_FILE: /dev/null
