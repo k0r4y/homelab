@@ -1,0 +1,47 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      # Only trigger when manifests actually change
+      - "kubernetes/manifests/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: kubectl apply
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.35.0"
+
+      - name: Configure kubeconfig
+        # Decodes the base64 kubeconfig from GitHub Secrets
+        # and writes it to the standard kubeconfig location
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Install Tailscale
+        # GitHub Actions runner needs Tailscale to reach your private cluster
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci
+
+      - name: Verify cluster connection
+        run: kubectl get nodes
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f kubernetes/manifests/namespaces.yaml
+          kubectl apply -f kubernetes/manifests/apps/
+          kubectl apply -f kubernetes/manifests/monitoring/
