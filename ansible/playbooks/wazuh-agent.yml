@@ -49,4 +49,4 @@
         name: wazuh-agent
       register: agent_status
       changed_when: false
-      failed_when: agent_status.status.ActiveState != "active"      
+      failed_when: agent_status.status.ActiveState != "active"
