@@ -15,3 +15,11 @@ sudo apt update
 sudo apt install -y git ansible python3
 
 echo "=== Bootstrap complete. Run rebuild-mgmt01.yml next ==="
+
+# Authorize Windows workstation key
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+echo "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAn4ep/nPkuowzeqGwmBrC2rxmfsiUSFfQAeuN3UhFAp k@DESKTOP-5AD7ILD" >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+
+echo "=== Bootstrap complete. Run rebuild-mgmt01.yml next ==="
