@@ -1,111 +1,102 @@
-# mgmt01 Disaster Recovery Guide (Hyper-V + Ansible Homelab)
+# mgmt01 Disaster Recovery Guide
 
-This document describes the complete procedure to rebuild the `mgmt01` management node from scratch in the event of system failure, corruption, or full VM loss.
+## Overview
 
-It assumes:
-- Ubuntu Server running as a Hyper-V virtual machine
-- Infrastructure managed using Ansible
-- Configuration stored in a GitHub repository
-- mgmt01 acts as the central management and monitoring node
+Full procedure to rebuild mgmt01 from scratch after VM loss or corruption.
 
-# 1. Recovery Overview
+## Prerequisites
 
-If `mgmt01` is lost, the recovery process follows these steps:
+- Ubuntu Server 24.04 LTS ISO
+- Access to Hyper-V Manager on Windows host
+- Vault password (stored securely offline)
+- GitHub account access
 
-1. Recreate the Ubuntu VM in Hyper-V
-2. Install minimal system dependencies (git, python3, ansible)
-3. Clone the homelab repository from GitHub
-4. Validate Ansible inventory configuration
-5. Execute the rebuild playbook
-6. Verify service health (Grafana, nginx, monitoring stack)
+---
 
-# 2. Recreate the Virtual Machine (Hyper-V)
+## Step 1 — Create new VM in Hyper-V
 
-## 2.1 Create a new VM
+- Generation: 2
+- Memory: 4096 MB
+- Disk: 20 GB minimum
+- Network: external virtual switch
+- Hostname: mgmt01
+- User: k0r4y
+- Enable OpenSSH during install
 
-- Open Hyper-V Manager
-- Select “New Virtual Machine”
-- Name: mgmt01
-- Generation: Generation 2
-- Memory: 2–4 GB recommended
-- Network: Attach to existing virtual switch
-- Disk: Minimum 20 GB recommended
+---
 
-## 2.2 Install Ubuntu Server
+## Step 2 — Bootstrap
 
-Attach the Ubuntu Server ISO and complete installation.
+SSH in from Windows terminal, then run:
 
-Recommended installation options:
-- OpenSSH Server enabled during installation
-- Administrative user created during setup
-- Hostname set to: mgmt01
-
-After installation, confirm SSH access:
-
-ssh <user>@<mgmt01-ip>
-
-# 3. Install Required Base Tools
-
-sudo apt update
-sudo apt install -y git python3 python3-pip ansible
-
-Purpose:
-- git: retrieve infrastructure repository
-- python3: required runtime for Ansible
-- ansible: configuration management engine
-
-# 4. Clone Infrastructure Repository
-
-git clone https://github.com/<your-user>/homelab.git
+```bash
+sudo apt update && sudo apt install -y git
+git clone https://github.com/k0r4y/homelab.git
 cd homelab
+./bootstrap-mgmt01.sh
+```
 
-# 5. Verify Ansible Inventory
+This installs dependencies and configures passwordless sudo. Requires sudo password once.
 
-Ensure mgmt01 exists:
+---
 
-[mgmt01]
-mgmt01 ansible_host=<ip-address> ansible_user=<ssh-user>
+## Step 3 — Create vault password file
 
-Verify:
+```bash
+echo "your-vault-password" > ~/.vault_pass
+chmod 600 ~/.vault_pass
+```
 
-cat ansible/inventories/hosts
+---
 
-# 6. Run the Rebuild Process
+## Step 4 — Install Ansible collections
 
-## Dry run
+```bash
+cd ~/homelab/ansible
+ansible-galaxy collection install -r requirements.yml
+```
 
-ansible-playbook -i ansible/inventories/hosts ansible/playbooks/rebuild-mgmt01.yml --check
+---
 
-## Full rebuild
+## Step 5 — Run rebuild playbook
 
-ansible-playbook -i ansible/inventories/hosts ansible/playbooks/rebuild-mgmt01.yml
+```bash
+ansible-playbook playbooks/rebuild-mgmt01.yml
+```
 
-## Optional wipe mode
-
-wipe_data: true
-
-This will:
-- Stop containers
-- Remove containers
-- Delete /opt/monitoring
-- Delete /opt/reverse_proxy
-
-# 7. Services Deployed
-
-- Prometheus + Grafana
+This deploys:
+- Common packages
+- Docker Engine
+- GitHub SSH key and git configuration
+- Monitoring stack (Prometheus, Grafana, cAdvisor)
 - Nginx reverse proxy
-- Node exporter
+- Node Exporter
 
-# 8. Verification
+---
 
-curl http://localhost:3000
-curl http://localhost
+## Step 6 — Verify
 
-# 9. Troubleshooting
+```bash
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+systemctl status nginx --no-pager | head -5
+ssh -T git@github.com
+```
 
-docker ps -a
-systemctl status docker
-systemctl status nginx
+---
 
-# End of Document
+## Step 7 — Restore Grafana dashboards
 
+Re-import dashboards manually:
+- Connections → Data sources → Add Prometheus → URL: `http://prometheus:9090`
+- Dashboards → Import → ID `1860` (Node Exporter)
+- Dashboards → Import → ID `14282` (cAdvisor)
+
+---
+
+## Optional: Full wipe and rebuild
+
+```bash
+ansible-playbook playbooks/rebuild-mgmt01.yml -e wipe_data=true
+```
+
+WARNING: permanently deletes `/opt/monitoring` and `/opt/reverse_proxy`.
