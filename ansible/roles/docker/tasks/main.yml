@@ -29,7 +29,7 @@
   ansible.builtin.apt_repository:
     repo: >-
       deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg]
-      https://download.docker.com/linux/ubuntu noble stable
+      https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable
     state: present
     filename: docker
 
@@ -59,3 +59,4 @@
     name: ansible
     groups: docker
     append: true
+  when: ansible_user == 'ansible'
