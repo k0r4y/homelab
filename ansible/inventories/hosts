@@ -10,3 +10,8 @@ node03 ansible_host=192.168.178.28
 [all:vars]
 ansible_user=ansible
 ansible_python_interpreter=/usr/bin/python3
+
+[wazuh_agents]
+mgmt01 ansible_host=192.168.178.24 ansible_connection=local
+node01 ansible_host=192.168.178.25
+node02 ansible_host=192.168.178.27
