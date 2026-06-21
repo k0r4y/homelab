@@ -15,3 +15,16 @@ ansible_python_interpreter=/usr/bin/python3
 mgmt01 ansible_host=192.168.178.24 ansible_connection=local
 node01 ansible_host=192.168.178.25
 node02 ansible_host=192.168.178.27
+
+[management]
+mgmt01 ansible_host=192.168.178.24 ansible_connection=local ansible_user=k0r4y
+fw01   ansible_host=192.168.178.33 ansible_user=ansible
+
+[nodes]
+node01 ansible_host=192.168.178.25
+node02 ansible_host=192.168.178.27
+node03 ansible_host=192.168.178.28
+
+[targets]
+target01 ansible_host=10.10.10.30
+attacker01 ansible_host=10.10.10.20
