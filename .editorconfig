@@ -1,0 +1,30 @@
+# .editorconfig
+# Ensures consistent file encoding and formatting across editors and OSes.
+# VS Code respects this automatically with the EditorConfig extension.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.yml]
+indent_size = 2
+
+[*.yaml]
+indent_size = 2
+
+[*.hcl]
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+
+$content = Get-Content "E:\homelab\packer\http\user-data" -Raw
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText("E:\homelab\packer\http\user-data", $content, $utf8NoBom)
