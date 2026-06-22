@@ -41,6 +41,10 @@
     path: /etc/netplan/00-installer-config.yaml
     state: absent
 
+- name: Clear loop variable before netplan
+  ansible.builtin.set_fact:
+    item: null
+
 - name: Write netplan configuration for static IP
   ansible.builtin.template:
     src: netplan.yaml.j2
