@@ -2,30 +2,66 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  # Use local golden image once Packer build is complete
-  # For now using ubuntu/noble64 as placeholder
-  config.vm.box = "ubuntu/noble64"
+  # Use your custom golden image (built with Packer)
+  config.vm.box = "golden-ubuntu"
+  config.vm.box_check_update = false
 
   config.vm.hostname = "fw01"
 
   config.vm.provider "hyperv" do |h|
     h.vmname = "fw01"
-    h.memory = 2048
-    h.cpus   = 1
+    h.memory = 1024
+    h.cpus = 1
     h.enable_virtualization_extensions = false
     h.linked_clone = false
   end
 
   # WAN interface — management access via home network
-  config.vm.network "public_network", bridge: "External Virtual Switch"
+  config.vm.network "public_network",
+    bridge: "External Switch VMs",
+    ip: "192.168.178.33"
 
   # LAN interface — attack zone (Lab-Internal isolated switch)
-  config.vm.network "public_network", bridge: "Lab-Internal"
+  config.vm.network "private_network",
+    ip: "10.10.10.1",
+    virtual_switch_name: "Lab-Internal"
 
+  # Provision with Ansible
   config.vm.provision "ansible" do |ansible|
-    ansible.playbook          = "../../ansible/site.yml"
-    ansible.inventory_path    = "../../ansible/inventories/hosts"
+    ansible.playbook = "../../ansible/site.yml"
+    ansible.inventory_path = "../../ansible/inventories/hosts"
     ansible.vault_password_file = "../../.vault_pass"
-    ansible.become            = true
+    ansible.become = true
+    ansible.limit = "fw01"
+    ansible.verbose = "v"
+    ansible.extra_vars = {
+      ansible_python_interpreter: "/usr/bin/python3"
+    }
+  end
+
+  # Shell provisioner to set up ansible user
+  config.vm.provision "shell" do |s|
+    s.inline = <<-SHELL
+      # Create ansible user with sudo privileges
+      useradd -m -s /bin/bash ansible 2>/dev/null || true
+      echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ansible
+      
+      # Set up SSH directory
+      mkdir -p /home/ansible/.ssh
+      chmod 700 /home/ansible/.ssh
+      
+      # Copy root's SSH key to ansible user (if available)
+      if [ -f /root/.ssh/authorized_keys ]; then
+        cp /root/.ssh/authorized_keys /home/ansible/.ssh/
+        chown -R ansible:ansible /home/ansible/.ssh
+        chmod 600 /home/ansible/.ssh/authorized_keys
+      fi
+      
+      # Ensure networking is ready
+      sleep 5
+      
+      echo "✅ fw01 provisioning complete"
+      echo "   SSH: ssh ansible@192.168.178.33"
+    SHELL
   end
 end

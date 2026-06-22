@@ -1,2 +1,76 @@
 ---
-# tasks file for roles/gateway
+# Gateway/Firewall role - Configures fw01 as NAT gateway and firewall
+
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+
+- name: Enable IP forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+  notify: restart nftables
+
+- name: Create nftables config directory
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy nftables main configuration
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nftables
+
+- name: Deploy nftables service override
+  ansible.builtin.template:
+    src: nftables.service.j2
+    dest: /etc/systemd/system/nftables.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nftables
+
+- name: Ensure nftables service is enabled and running
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started
+    daemon_reload: true
+    masked: false
+
+- name: Apply nftables ruleset
+  ansible.builtin.command:
+    cmd: nft -f /etc/nftables.conf
+  changed_when: false
+  register: nft_apply
+  failed_when: nft_apply.rc != 0
+
+- name: Show nftables ruleset for verification
+  ansible.builtin.command:
+    cmd: nft list ruleset
+  register: nft_ruleset
+  changed_when: false
+
+- name: Display nftables rules
+  ansible.builtin.debug:
+    msg: "{{ nft_ruleset.stdout_lines }}"
+
+- name: Install network troubleshooting tools
+  ansible.builtin.apt:
+    name:
+      - tcpdump
+      - traceroute
+      - net-tools
+      - dnsutils
+    state: present

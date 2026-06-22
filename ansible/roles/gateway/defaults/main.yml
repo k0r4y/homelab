@@ -1,2 +1,16 @@
 ---
-# defaults file for roles/gateway
+# Gateway role default variables
+
+# Network interfaces
+gateway_wan_interface: eth0
+gateway_lan_interface: eth1
+gateway_management_interface: eth0
+gateway_attack_interface: eth1
+
+# Subnets
+gateway_management_subnet: 192.168.178.0/24
+gateway_trusted_subnet: 192.168.178.0/24
+gateway_attack_subnet: 10.10.10.0/24
+
+# Features
+gateway_attack_zone_enabled: true

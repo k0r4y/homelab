@@ -1,7 +1,41 @@
 ---
-- name: Configure all nodes
-  hosts: nodes
-  become: true
+- name: Configure all hosts
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
 
-  roles:
-    - common
+    - name: Install common packages
+      ansible.builtin.apt:
+        name:
+          - curl
+          - vim
+          - htop
+          - git
+        state: present
+
+- name: Configure gateway (fw01)
+  hosts: fw01
+  become: yes
+  tasks:
+    - name: Enable IP forwarding
+      ansible.builtin.sysctl:
+        name: net.ipv4.ip_forward
+        value: '1'
+        sysctl_set: yes
+        state: present
+        reload: yes
+
+    - name: Install nftables
+      ansible.builtin.apt:
+        name: nftables
+        state: present
+
+    - name: Ensure nftables is enabled
+      ansible.builtin.systemd:
+        name: nftables
+        enabled: yes
+        state: started
