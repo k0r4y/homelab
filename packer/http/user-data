@@ -1,0 +1,29 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  network:
+    network:
+      version: 2
+      ethernets:
+        eth0:
+          dhcp4: true
+  storage:
+    layout:
+      name: direct
+  identity:
+    hostname: ubuntu-golden
+    username: ansible
+    password: "$6$XDiUnlYTUT8G9DqA$PO6od3/FtQicCfmc/pfa94RuHWv.77qqyrKX9ZBYFtKZnLnrZGKeU6.qpGmBMD5LsKqhSDIObZ6Bs91eTLjsq."
+  ssh:
+    install-server: true
+    allow-pw: true
+  packages:
+    - openssh-server
+    - python3
+    - curl
+  late-commands:
+    - echo 'ansible ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ansible
+    - chmod 440 /target/etc/sudoers.d/ansible

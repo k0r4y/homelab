@@ -1,0 +1,10 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: packer-ubuntu
+    password: "ansible" # This must match your packer config
+    username: ansible
+  ssh:
+    install-server: yes
+    allow-pw: yes

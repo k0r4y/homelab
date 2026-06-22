@@ -1,0 +1,13 @@
+﻿# =============================================================================
+# Packer Autoinstall Configuration — meta-data
+# =============================================================================
+# Cloud-init requires BOTH user-data and meta-data files to exist.
+# On real cloud providers (AWS, Azure) this file contains instance ID,
+# hostname, and other cloud-specific metadata.
+#
+# We are running on Hyper-V (not a cloud), so there is no real metadata
+# to provide. This file is intentionally empty — its presence alone
+# satisfies cloud-init's requirement for the file to exist.
+# =============================================================================
+instance-id: packer-ubuntu-2404
+local-hostname: ubuntu-24
