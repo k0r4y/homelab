@@ -178,7 +178,7 @@ The `user-data` file was correctly detected as cloud-config.
 ## Final Working Configuration
 
 ### ubuntu24.pkr.hcl
-
+```
 # =============================================================================
 # Ubuntu 24.04 Hyper-V Golden Image
 # =============================================================================
@@ -268,9 +268,11 @@ build {
     ]
   }
 }
+```
+
 
 ### build.ps1
-
+```
 Clear-Host
 Write-Host "=== Packer Ubuntu 24.04 Build ==="
 Write-Host ""
@@ -338,7 +340,7 @@ if ($useLocalIso) {
 }
 
 packer build -force -var "switch_name=$switchName" -var "host_ip=$hostIP" $isoArg ubuntu24.pkr.hcl
-
+```
 ---
 
 ## Diagnostic Commands Used
