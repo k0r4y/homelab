@@ -12,16 +12,6 @@
     state: directory
     mode: "0755"
 
-- name: Deploy netplan configuration
-  ansible.builtin.template:
-    src: netplan.yaml.j2
-    dest: "{{ target_netplan_file }}"
-    mode: "0644"
-  notify: netplan apply
-
-- name: Apply netplan configuration
-  ansible.builtin.meta: flush_handlers
-
 - name: Set hostname
   ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"
@@ -47,3 +37,19 @@
   ansible.builtin.import_tasks: vulnerable.yml
   when: target_enable_vulnerable_services | bool
   tags: vulnerable
+
+# ---- IP CHANGE (LAST STEP, NO REBOOT) ----
+- name: Write netplan configuration for static IP
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: /etc/netplan/50-target01.yaml
+    mode: "0644"
+
+- name: Schedule netplan apply after SSH session ends
+  ansible.builtin.shell:
+    cmd: |
+      nohup bash -c "sleep 2; netplan apply" &
+    executable: /bin/bash
+  async: 0
+  poll: 0
+  ignore_errors: true
