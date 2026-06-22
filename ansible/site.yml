@@ -20,25 +20,8 @@
 - name: Configure gateway (fw01)
   hosts: fw01
   become: yes
-  tasks:
-    - name: Enable IP forwarding
-      ansible.builtin.sysctl:
-        name: net.ipv4.ip_forward
-        value: '1'
-        sysctl_set: yes
-        state: present
-        reload: yes
-
-    - name: Install nftables
-      ansible.builtin.apt:
-        name: nftables
-        state: present
-
-    - name: Ensure nftables is enabled
-      ansible.builtin.systemd:
-        name: nftables
-        enabled: yes
-        state: started
+  roles:
+    - gateway
 
 - name: Configure target (target01)
   hosts: target01

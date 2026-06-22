@@ -6,8 +6,6 @@ Vagrant.configure("2") do |config|
   config.vm.box_check_update = false
   config.vm.hostname = "fw01"
 
-  # ---- Direct SSH (no IP detection) ----
-  config.ssh.host = "192.168.178.100"
   config.ssh.username = "ansible"
   config.ssh.password = "ansible"
 
@@ -19,7 +17,6 @@ Vagrant.configure("2") do |config|
     h.linked_clone = false
   end
 
-  # Use DHCP (no static IP) to avoid the ".1" warning
   config.vm.network "public_network", bridge: "External Switch VMs"
   config.vm.network "private_network", ip: "10.10.10.1", virtual_switch_name: "Lab-Internal"
 
@@ -32,24 +29,20 @@ Vagrant.configure("2") do |config|
       #!/bin/bash
       set -e
 
-      # --- Ensure ansible user exists ---
       if ! id -u ansible &>/dev/null; then
         useradd -m -s /bin/bash ansible
         echo "ansible:ansible" | chpasswd
         echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ansible
       fi
 
-      # --- Check vault password ---
       if [ -z "$ANSIBLE_VAULT_PASSWORD" ]; then
         echo "❌ ANSIBLE_VAULT_PASSWORD environment variable is not set."
         exit 1
       fi
 
-      # --- Install dependencies ---
       apt-get update -qq
       apt-get install -y -qq git ansible
 
-      # --- Clone repository ---
       REPO_DIR="/opt/homelab"
       if [ -d "$REPO_DIR" ]; then
         cd "$REPO_DIR" && git pull
@@ -58,7 +51,6 @@ Vagrant.configure("2") do |config|
       fi
       chown -R ansible:ansible "$REPO_DIR"
 
-      # --- Run Ansible ---
       VAULT_FILE="$REPO_DIR/.vault_pass"
       echo "$ANSIBLE_VAULT_PASSWORD" > "$VAULT_FILE"
       chmod 600 "$VAULT_FILE"
@@ -69,7 +61,8 @@ Vagrant.configure("2") do |config|
         --limit fw01 \
         --connection local \
         --become \
-        --vault-password-file "$VAULT_FILE"
+        --vault-password-file "$VAULT_FILE" \
+        --extra-vars "target_ip=192.168.178.33 target_gateway=192.168.178.1 target_netmask=24 target_interface=eth0"
 
       shred -u "$VAULT_FILE" 2>/dev/null || true
       echo "✅ fw01 provisioning complete."
