@@ -2,30 +2,30 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
+  # Use local golden image once Packer build is complete
+  # For now using ubuntu/noble64 as placeholder
   config.vm.box = "ubuntu/noble64"
 
-  # Hyper-V resource allocation
+  config.vm.hostname = "fw01"
+
   config.vm.provider "hyperv" do |h|
     h.vmname = "fw01"
-    h.memory = 2048  # Bumped to 2GB to safely support IDS/Suricata in the future
-    h.cpus = 1
+    h.memory = 2048
+    h.cpus   = 1
+    h.enable_virtualization_extensions = false
+    h.linked_clone = false
   end
 
-  # External network: Bridges to your home network for management access
-  # IMPORTANT: Change "External Virtual Switch" if your switch name differs
+  # WAN interface — management access via home network
   config.vm.network "public_network", bridge: "External Virtual Switch"
 
-  # Internal network: Isolated switch for the Attack Zone (attacker01/target01)
-  config.vm.network "private_network", bridge: "Lab-Internal"
+  # LAN interface — attack zone (Lab-Internal isolated switch)
+  config.vm.network "public_network", bridge: "Lab-Internal"
 
-  # Automate configuration immediately after VM creation
   config.vm.provision "ansible" do |ansible|
-    # Point to the existing master playbook
-    ansible.playbook = "../../ansible/site.yml"
-    # Use existing inventory so fw01 is recognized as part of the lab
-    ansible.inventory_path = "../../ansible/inventories/hosts"
-    # Reference the vault pass so playbooks can access encrypted secrets
+    ansible.playbook          = "../../ansible/site.yml"
+    ansible.inventory_path    = "../../ansible/inventories/hosts"
     ansible.vault_password_file = "../../.vault_pass"
-    ansible.become = true
+    ansible.become            = true
   end
 end
