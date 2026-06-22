@@ -4,25 +4,27 @@
 Vagrant.configure("2") do |config|
   config.vm.box = "golden-ubuntu"
   config.vm.box_check_update = false
-  config.vm.hostname = "fw01"
+  config.vm.hostname = "target01"
 
-  # ---- Direct SSH (no IP detection) ----
-  config.ssh.host = "192.168.178.100"
+  # ---- Use ansible user for SSH ----
   config.ssh.username = "ansible"
   config.ssh.password = "ansible"
 
   config.vm.provider "hyperv" do |h|
-    h.vmname = "fw01"
+    h.vmname = "target01"
     h.memory = 1024
     h.cpus = 1
     h.enable_virtualization_extensions = false
     h.linked_clone = false
   end
 
-  # Use DHCP (no static IP) to avoid the ".1" warning
-  config.vm.network "public_network", bridge: "External Switch VMs"
-  config.vm.network "private_network", ip: "10.10.10.1", virtual_switch_name: "Lab-Internal"
+  # ---- Network: Lab-Internal only (isolated) ----
+  # target01 should NOT have direct internet access — it goes through fw01
+  config.vm.network "private_network",
+    ip: "10.10.10.30",
+    virtual_switch_name: "Lab-Internal"
 
+  # ---- ansible-pull self-provisioning ----
   config.vm.provision "shell" do |shell|
     shell.privileged = true
     shell.env = {
@@ -42,37 +44,44 @@ Vagrant.configure("2") do |config|
       # --- Check vault password ---
       if [ -z "$ANSIBLE_VAULT_PASSWORD" ]; then
         echo "❌ ANSIBLE_VAULT_PASSWORD environment variable is not set."
+        echo "Please set it before running vagrant up."
         exit 1
       fi
 
       # --- Install dependencies ---
+      echo "📦 Installing Ansible and Git..."
       apt-get update -qq
       apt-get install -y -qq git ansible
 
       # --- Clone repository ---
       REPO_DIR="/opt/homelab"
       if [ -d "$REPO_DIR" ]; then
+        echo "🔄 Pulling latest changes..."
         cd "$REPO_DIR" && git pull
       else
+        echo "📥 Cloning homelab repository..."
         git clone https://github.com/k0r4y/homelab.git "$REPO_DIR"
       fi
       chown -R ansible:ansible "$REPO_DIR"
 
-      # --- Run Ansible ---
+      # --- Write vault password to file ---
       VAULT_FILE="$REPO_DIR/.vault_pass"
       echo "$ANSIBLE_VAULT_PASSWORD" > "$VAULT_FILE"
       chmod 600 "$VAULT_FILE"
 
+      # --- Run Ansible ---
+      echo "🚀 Running Ansible playbook..."
       cd "$REPO_DIR/ansible"
       ansible-playbook site.yml \
         --inventory inventories/hosts \
-        --limit fw01 \
+        --limit target01 \
         --connection local \
         --become \
         --vault-password-file "$VAULT_FILE"
 
+      # --- Clean up ---
       shred -u "$VAULT_FILE" 2>/dev/null || true
-      echo "✅ fw01 provisioning complete."
+      echo "✅ target01 provisioning complete."
     SHELL
   end
 end
