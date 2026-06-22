@@ -1,14 +1,29 @@
-*.log
-*.retry
-.vscode/
-*.swp
-*.bak
+packer/packer_cache/
+packer/output-*/
+packer/*~
+.vagrant/
+*.vault.yml
 .vault_pass
-*.deb
-# Terraform
-*.tfvars
-*.tfstate
-*.tfstate.backup
-.terraform/
-.terraform.lock.hcl
-terraform.tfvars
+*.log
+.DS_Store
+
+# -----------------------------------------------------------------------------
+# Added
+# -----------------------------------------------------------------------------
+*.un~
+vagrant/*/.vagrant/
+ansible/*.retry
+__pycache__/
+*.pyc
+packer/http/*.txt
+queryex
+*.tmp
+*.temp
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*.vhdx
+*.vhd
+*.avhdx
+packer/packer_cache/*.lock
