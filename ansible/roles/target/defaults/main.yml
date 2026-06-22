@@ -1,0 +1,9 @@
+---
+target_ip: "10.10.10.30"
+target_gateway: "10.10.10.1"
+target_netmask: "24"
+target_nameservers:
+  - "8.8.8.8"
+  - "1.1.1.1"
+target_interface: "eth0"
+target_enable_vulnerable_services: false

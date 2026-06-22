@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: k0r4y
+  description: Configures a vulnerable target machine for pentesting
+  license: MIT
+  min_ansible_version: "2.16"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - noble
+        - 24.04
+  galaxy_tags:
+    - security
+    - pentesting
+    - target
+    - vulnerable
+dependencies: []

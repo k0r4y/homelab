@@ -1,0 +1,3 @@
+---
+target_ansible_user: "ansible"
+target_netplan_file: "/etc/netplan/50-target01.yaml"

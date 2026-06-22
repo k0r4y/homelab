@@ -1,0 +1,9 @@
+---
+- name: netplan apply
+  ansible.builtin.command: netplan apply
+  changed_when: false
+
+- name: restart ssh
+  ansible.builtin.systemd:
+    name: ssh
+    state: restarted

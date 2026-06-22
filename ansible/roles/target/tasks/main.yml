@@ -1,0 +1,49 @@
+---
+- name: Include variables
+  ansible.builtin.include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}.yml"
+    - "main.yml"
+  tags: always
+
+- name: Ensure netplan directory exists
+  ansible.builtin.file:
+    path: /etc/netplan
+    state: directory
+    mode: "0755"
+
+- name: Deploy netplan configuration
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: "{{ target_netplan_file }}"
+    mode: "0644"
+  notify: netplan apply
+
+- name: Apply netplan configuration
+  ansible.builtin.meta: flush_handlers
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Update /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+
+- name: Ensure ansible user has SSH access
+  ansible.builtin.import_tasks: ssh.yml
+  when: target_setup_ssh | default(true)
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ target_base_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install vulnerable services
+  ansible.builtin.import_tasks: vulnerable.yml
+  when: target_enable_vulnerable_services | bool
+  tags: vulnerable

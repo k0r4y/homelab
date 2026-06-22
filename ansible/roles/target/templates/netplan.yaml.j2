@@ -1,0 +1,13 @@
+network:
+  version: 2
+  ethernets:
+    {{ target_interface }}:
+      dhcp4: false
+      addresses:
+        - {{ target_ip }}/{{ target_netmask }}
+      gateway4: {{ target_gateway }}
+      nameservers:
+        addresses:
+{% for ns in target_nameservers %}
+          - {{ ns }}
+{% endfor %}

@@ -39,3 +39,9 @@
         name: nftables
         enabled: yes
         state: started
+
+- name: Configure target (target01)
+  hosts: target01
+  become: yes
+  roles:
+    - target
