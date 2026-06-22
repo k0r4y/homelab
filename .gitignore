@@ -1,3 +1,6 @@
+# -----------------------------------------------------------------------------
+# Existing
+# -----------------------------------------------------------------------------
 packer/packer_cache/
 packer/output-*/
 packer/*~
@@ -27,3 +30,115 @@ desktop.ini
 *.vhd
 *.avhdx
 packer/packer_cache/*.lock
+~
+
+# -----------------------------------------------------------------------------
+# Terraform (secrets & state)
+# -----------------------------------------------------------------------------
+terraform/azure/.terraform/
+terraform/azure/terraform.tfstate
+terraform/azure/terraform.tfstate.backup
+terraform/azure/terraform.tfvars
+terraform/azure/.terraform.lock.hcl
+terraform/azure/*.tfstate
+terraform/azure/*.tfstate.backup
+terraform/azure/*.tfvars
+terraform/azure/terraform.tfplan
+
+# -----------------------------------------------------------------------------
+# Ansible (secrets & temporary files)
+# -----------------------------------------------------------------------------
+ansible/inventories/group_vars/all/vault.yml
+ansible/inventories/host_vars/*/vault.yml
+ansible/playbooks/*.retry
+ansible/*.vault.yml
+ansible/wazuh-agent_*.deb
+ansible/*.deb
+ansible/*.tar.gz
+ansible/.vault_pass
+
+# -----------------------------------------------------------------------------
+# Kubernetes (secrets & local configs)
+# -----------------------------------------------------------------------------
+kubernetes/manifests/**/secrets.yaml
+kubernetes/manifests/**/*secret*.yaml
+kubernetes/manifests/**/kustomization.local.yaml
+kubernetes/.kube/
+kubernetes/kubeconfig
+kubernetes/*.kubeconfig
+
+# -----------------------------------------------------------------------------
+# Vagrant (per-VM state & boxes)
+# -----------------------------------------------------------------------------
+vagrant/.vagrant/
+vagrant/*/.vagrant/
+vagrant/boxes/
+vagrant/*.box
+vagrant/*.vbox
+vagrant/Vagrantfile.local
+
+# -----------------------------------------------------------------------------
+# Local IDE & OS files
+# -----------------------------------------------------------------------------
+.idea/
+.vscode/
+*.code-workspace
+.vagrant/
+*.swp
+*.swo
+*~
+*.bak
+*.orig
+.nfs*
+.vimrc.local
+.bash_history
+.history
+*.local
+
+# -----------------------------------------------------------------------------
+# Documentation build outputs
+# -----------------------------------------------------------------------------
+docs/_build/
+docs/out/
+docs/html/
+docs/*.pdf
+docs/*.epub
+
+# -----------------------------------------------------------------------------
+# Backup & temporary files
+# -----------------------------------------------------------------------------
+*.backup
+*.bak
+*.old
+*.orig
+*.tmp
+*.temp
+*.cache
+*.pid
+*.lock
+*.dump
+*.sql
+
+# -----------------------------------------------------------------------------
+# OS specific
+# -----------------------------------------------------------------------------
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+.directory
+*.pid
+*.core
+core.*
