@@ -1,4 +1,5 @@
 ---
+# Default variables for target role
 target_ip: "10.10.10.30"
 target_gateway: "10.10.10.1"
 target_netmask: "24"
@@ -7,3 +8,13 @@ target_nameservers:
   - "1.1.1.1"
 target_interface: "eth0"
 target_enable_vulnerable_services: false
+
+# Base packages to install on all target VMs
+target_base_packages:
+  - curl
+  - vim
+  - htop
+  - git
+  - net-tools
+  - wget
+  - software-properties-common
