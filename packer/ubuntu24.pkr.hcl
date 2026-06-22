@@ -26,6 +26,10 @@ packer {
       source  = "github.com/hashicorp/hyperv"
       version = ">= 1.0.0"
     }
+    vagrant = {
+      source  = "github.com/hashicorp/vagrant"
+      version = ">= 1.0.0"
+    }
   }
 }
 
@@ -46,13 +50,11 @@ source "hyperv-iso" "ubuntu" {
 
   output_directory = var.output_dir
 
-  # HTTP server
   http_directory    = "http"
   http_port_min     = 8100
   http_port_max     = 8100
   http_bind_address = var.host_ip
 
-  # SSH - static IP
   ssh_host     = "192.168.178.100"
   ssh_port     = 22
   communicator = "ssh"
@@ -60,7 +62,6 @@ source "hyperv-iso" "ubuntu" {
   ssh_password = "ansible"
   ssh_timeout  = "60m"
 
-  # Boot command - uses cloud-config-url (replaces deprecated url)
   boot_wait = "10s"
   boot_command = [
     "e<wait3>",
@@ -85,5 +86,9 @@ build {
       "sudo dd if=/dev/zero of=/tmp/zeros bs=1M || true",
       "sudo rm -f /tmp/zeros"
     ]
+  }
+
+  post-processor "vagrant" {
+    output = "packer-ubuntu-24-04.box"
   }
 }
