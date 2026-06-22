@@ -5,10 +5,12 @@ Vagrant.configure("2") do |config|
   config.vm.box = "golden-ubuntu"
   config.vm.box_check_update = false
   config.vm.hostname = "target01"
+  config.vm.synced_folder ".", "/vagrant", disabled: true
 
-  # ---- Use ansible user for SSH ----
+  # ---- Explicit SSH settings (uses .100 during provisioning) ----
   config.ssh.username = "ansible"
   config.ssh.password = "ansible"
+  config.ssh.host = "192.168.178.100"
 
   config.vm.provider "hyperv" do |h|
     h.vmname = "target01"
@@ -18,12 +20,13 @@ Vagrant.configure("2") do |config|
     h.linked_clone = false
   end
 
-  # ---- Network: Lab-Internal only ----
+  config.vm.network "public_network",
+  bridge: "External Switch VMs"
+
   config.vm.network "private_network",
     ip: "10.10.10.30",
     virtual_switch_name: "Lab-Internal"
 
-  # ---- ansible-pull with extra_vars ----
   config.vm.provision "shell" do |shell|
     shell.privileged = true
     shell.env = {
@@ -33,25 +36,20 @@ Vagrant.configure("2") do |config|
       #!/bin/bash
       set -e
 
-      # --- Ensure ansible user exists ---
       if ! id -u ansible &>/dev/null; then
         useradd -m -s /bin/bash ansible
         echo "ansible:ansible" | chpasswd
         echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ansible
       fi
 
-      # --- Check vault password ---
       if [ -z "$ANSIBLE_VAULT_PASSWORD" ]; then
         echo "❌ ANSIBLE_VAULT_PASSWORD environment variable is not set."
         exit 1
       fi
 
-      # --- Install dependencies ---
-      echo "📦 Installing Ansible and Git..."
       apt-get update -qq
       apt-get install -y -qq git ansible
 
-      # --- Clone repository ---
       REPO_DIR="/opt/homelab"
       if [ -d "$REPO_DIR" ]; then
         cd "$REPO_DIR" && git pull
@@ -60,12 +58,10 @@ Vagrant.configure("2") do |config|
       fi
       chown -R ansible:ansible "$REPO_DIR"
 
-      # --- Write vault password to file ---
       VAULT_FILE="$REPO_DIR/.vault_pass"
       echo "$ANSIBLE_VAULT_PASSWORD" > "$VAULT_FILE"
       chmod 600 "$VAULT_FILE"
 
-      # --- Run Ansible with extra_vars ---
       cd "$REPO_DIR/ansible"
       ansible-playbook site.yml \
         --inventory inventories/hosts \
@@ -75,7 +71,6 @@ Vagrant.configure("2") do |config|
         --vault-password-file "$VAULT_FILE" \
         --extra-vars "target_ip=10.10.10.30 target_gateway=10.10.10.1 target_netmask=24 target_interface=eth1"
 
-      # --- Clean up ---
       shred -u "$VAULT_FILE" 2>/dev/null || true
       echo "✅ target01 provisioning complete."
     SHELL

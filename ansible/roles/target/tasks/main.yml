@@ -38,59 +38,33 @@
   when: target_enable_vulnerable_services | bool
   tags: vulnerable
 
-# ---- IP CHANGE (LAST STEP, NO REBOOT) ----
+# ---- IP CHANGE (LAST STEP) ----
+- name: Remove golden image netplan config
+  ansible.builtin.file:
+    path: /etc/netplan/00-installer-config.yaml
+    state: absent
+
 - name: Write netplan configuration for static IP
   ansible.builtin.template:
     src: netplan.yaml.j2
-    dest: /etc/netplan/50-target01.yaml
-    mode: "0644"
-
-- name: Schedule netplan apply after SSH session ends
-  ansible.builtin.shell:
-    cmd: |
-      nohup bash -c "sleep 2; netplan apply" &
-    executable: /bin/bash
-  async: 0
-  poll: 0
-  ignore_errors: true
-
-# ---- IP CHANGE (LAST STEP) ----
-- name: Write netplan configuration for the correct IP
-  ansible.builtin.template:
-    src: netplan.yaml.j2
     dest: /etc/netplan/50-{{ inventory_hostname }}.yaml
-    mode: "0644"
+    mode: "0600"
   when: target_ip is defined
-
-- name: Schedule netplan apply after SSH session ends
-  ansible.builtin.shell:
-    cmd: |
-      nohup bash -c "sleep 2; netplan apply" &
-    executable: /bin/bash
-  async: 0
-  poll: 0
-  ignore_errors: true
-
-- name: Remove the secondary .100 IP if present
-  ansible.builtin.shell:
-    cmd: |
-      ip addr del 192.168.178.100/24 dev {{ target_interface | default('eth0') }} 2>/dev/null || true
-    executable: /bin/bash
-  ignore_errors: true
 
 - name: Disable cloud-init network config
   ansible.builtin.file:
     path: /etc/cloud/cloud-init.disabled
     state: touch
+    mode: "0644"
 
-- name: Remove `ip=` parameter from GRUB
+- name: Remove ip= parameter from GRUB
   ansible.builtin.replace:
     path: /etc/default/grub
     regexp: ' ip=[^ ]*'
     replace: ''
   notify: update grub
 
-- name: Schedule reboot to finalize GRUB changes
+- name: Schedule reboot to finalize network and GRUB changes
   ansible.builtin.command: shutdown -r +1
   async: 0
   poll: 0

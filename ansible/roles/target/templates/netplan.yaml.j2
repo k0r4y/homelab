@@ -1,12 +1,71 @@
-network:
-  version: 2
-  ethernets:
-    {{ target_interface | default('eth0') }}:
-      dhcp4: false
-      addresses:
-        - {{ target_ip }}/{{ target_netmask | default('24') }}
-      routes:
-        - to: default
-          via: {{ target_gateway }}
-      nameservers:
-        addresses: [8.8.8.8, 1.1.1.1]
+---
+- name: Include variables
+  ansible.builtin.include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}.yml"
+    - "main.yml"
+  tags: always
+
+- name: Ensure netplan directory exists
+  ansible.builtin.file:
+    path: /etc/netplan
+    state: directory
+    mode: "0755"
+
+- name: Set hostname
+  ansible.builtin.hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Update /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ inventory_hostname }}"
+
+- name: Ensure ansible user has SSH access
+  ansible.builtin.import_tasks: ssh.yml
+  when: target_setup_ssh | default(true)
+
+- name: Install base packages
+  ansible.builtin.apt:
+    name: "{{ target_base_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install vulnerable services
+  ansible.builtin.import_tasks: vulnerable.yml
+  when: target_enable_vulnerable_services | bool
+  tags: vulnerable
+
+# ---- IP CHANGE (LAST STEP) ----
+- name: Remove golden image netplan config
+  ansible.builtin.file:
+    path: /etc/netplan/00-installer-config.yaml
+    state: absent
+
+- name: Write netplan configuration for static IP
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: /etc/netplan/50-{{ inventory_hostname }}.yaml
+    mode: "0600"
+  when: target_ip is defined
+
+- name: Disable cloud-init network config
+  ansible.builtin.file:
+    path: /etc/cloud/cloud-init.disabled
+    state: touch
+    mode: "0644"
+
+- name: Remove ip= parameter from GRUB
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: ' ip=[^ ]*'
+    replace: ''
+  notify: update grub
+
+- name: Schedule reboot to finalize network and GRUB changes
+  ansible.builtin.command: shutdown -r +1
+  async: 0
+  poll: 0
+  ignore_errors: true
