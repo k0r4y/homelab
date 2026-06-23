@@ -16,7 +16,9 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-      - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning
+    volumes:
+      - {{ monitoring_dir }}/loki-config.yaml:/etc/loki/local-config.yaml
+      - {{ monitoring_loki_data_dir }}:/loki  - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
@@ -40,6 +42,7 @@ services:
     volumes:
       - {{ monitoring_dir }}/loki-config.yaml:/etc/loki/local-config.yaml
       - {{ monitoring_loki_data_dir }}:/loki
+      - {{ monitoring_dir }}/rules:/loki/rules
     command: -config.file=/etc/loki/local-config.yaml
 
 volumes:

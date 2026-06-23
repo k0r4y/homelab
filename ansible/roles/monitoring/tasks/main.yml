@@ -51,3 +51,16 @@
     dest: /opt/monitoring/grafana/provisioning/datasources/datasources.yml
     mode: "0644"
   notify: Restart monitoring stack
+
+- name: Create Loki rules directory
+  ansible.builtin.file:
+    path: "{{ monitoring_dir }}/rules/homelab"
+    state: directory
+    mode: "0755"
+
+- name: Deploy Loki ruler rules
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/../monitoring/loki/rules/"
+    dest: "{{ monitoring_dir }}/rules/homelab/"
+    mode: "0644"
+  notify: Restart monitoring stack
