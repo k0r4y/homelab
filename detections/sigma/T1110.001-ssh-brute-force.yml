@@ -16,7 +16,7 @@ logsource:
 detection:
   selection:
     body|contains: 'Failed password'
-  condition: selection | count(src_ip) > 8
+  condition: selection
 falsepositives:
   - Legitimate users mistyping passwords repeatedly
   - Automated scripts with wrong credentials

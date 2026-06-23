@@ -1,0 +1,1 @@
+{job=~".+"} | logfmt | type=~`(?i)^SYSCALL$` and syscall=~`(?i)^execve$` and key=~`(?i)^audit\-wazuh\-execution$` and tty!~`(?i)^\(none\)$`
