@@ -79,23 +79,26 @@ table inet attack_filter {
         # Allow attack zone to access internet via WAN
         iifname "{{ gateway_attack_interface | default('eth1') }}" oifname "{{ gateway_wan_interface | default('eth0') }}" accept
 
-        # BLOCK: attack zone to management subnet (except established)
-        iifname "{{ gateway_attack_interface | default('eth1') }}" oifname "{{ gateway_management_interface | default('eth0') }}" counter drop
+        # BLOCK: attack zone to attack zone (lateral movement prevention)
         iifname "{{ gateway_attack_interface | default('eth1') }}" oifname "{{ gateway_lan_interface | default('eth1') }}" counter drop
 
-        # BLOCK: management to attack zone (except established)
-        iifname "{{ gateway_management_interface | default('eth0') }}" oifname "{{ gateway_attack_interface | default('eth1') }}" ct state new,invalid counter drop
-        iifname "{{ gateway_lan_interface | default('eth1') }}" oifname "{{ gateway_attack_interface | default('eth1') }}" ct state new,invalid counter drop
-
-        # Allow management to SSH into attack zone (for admin)
+        # Allow management to SSH into attack zone (required for Ansible)
+        # This must come BEFORE the drop rules below
         iifname "{{ gateway_management_interface | default('eth0') }}" oifname "{{ gateway_attack_interface | default('eth1') }}" \
             ip saddr {{ gateway_management_subnet | default('192.168.178.0/24') }} tcp dport 22 accept
 
-        # Allow ping for testing
+        # Allow management to ping attack zone (for connectivity testing)
+        # This must come BEFORE the drop rules below
         iifname "{{ gateway_management_interface | default('eth0') }}" oifname "{{ gateway_attack_interface | default('eth1') }}" \
             ip saddr {{ gateway_management_subnet | default('192.168.178.0/24') }} ip protocol icmp accept
+
+        # BLOCK: all other new connections from management to attack zone
+        # Placed AFTER the SSH and ICMP accept rules above
+        iifname "{{ gateway_management_interface | default('eth0') }}" oifname "{{ gateway_attack_interface | default('eth1') }}" ct state new,invalid counter drop
+        iifname "{{ gateway_lan_interface | default('eth1') }}" oifname "{{ gateway_attack_interface | default('eth1') }}" ct state new,invalid counter drop
 
         # Log dropped packets
         counter log prefix "nftables-attack-drop: " group 1 accept
     }
 }
+
