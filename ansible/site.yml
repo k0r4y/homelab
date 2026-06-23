@@ -1,13 +1,12 @@
 ---
 - name: Configure all hosts
   hosts: all
-  become: yes
+  become: true
   tasks:
     - name: Update apt cache
       ansible.builtin.apt:
-        update_cache: yes
+        update_cache: true
         cache_valid_time: 3600
-
     - name: Install common packages
       ansible.builtin.apt:
         name:
@@ -17,24 +16,19 @@
           - git
         state: present
 
-- name: Configure gateway (fw01)
-  hosts: fw01
-  become: yes
-  roles:
-    - gateway
-
-- name: Configure target (target01)
-  hosts: target01
-  become: yes
-  roles:
-    - target
-
 - name: Configure mgmt01
   hosts: mgmt01
   become: true
   roles:
     - common
     - monitoring
+    - mgmt01_hosts
+
+- name: Configure gateway (fw01)
+  hosts: fw01
+  become: true
+  roles:
+    - gateway
 
 - name: Configure target (target01)
   hosts: target01

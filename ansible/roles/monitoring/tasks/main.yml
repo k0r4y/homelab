@@ -60,6 +60,6 @@
 
 - name: Copy Loki rules
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../../monitoring/loki/rules/"
+    src: "/home/k0r4y/homelab/monitoring/loki/rules/"
     dest: "{{ monitoring_dir }}/rules/{{ loki_tenant_id }}/"
     mode: "0644"

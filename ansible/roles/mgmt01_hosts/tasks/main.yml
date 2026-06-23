@@ -20,3 +20,17 @@
   tags:
     - hosts
     - always
+
+- name: Add persistent route to attack zone via fw01
+  ansible.builtin.copy:
+    dest: /etc/netplan/51-routes.yaml
+    mode: "0600"
+    content: |
+      network:
+        version: 2
+        ethernets:
+          eth0:
+            routes:
+              - to: 10.10.10.0/24
+                via: 192.168.178.33
+  notify: apply netplan
