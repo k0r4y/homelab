@@ -142,3 +142,4 @@ $RECYCLE.BIN/
 *.pid
 *.core
 core.*
+packer/packer-ubuntu-24-04.box
