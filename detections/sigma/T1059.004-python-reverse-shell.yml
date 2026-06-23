@@ -1,0 +1,37 @@
+title: Python Reverse Shell via Socket
+id: d1e6f5a4-7b8c-9d0e-1f2a-3b4c5d6e7f8a
+status: stable
+description: Detects Python3 process execution with socket and subprocess patterns
+  commonly used in reverse shells. Complements rule T1059.004 which relies on TTY
+  detection — Python reverse shells may bypass TTY-based detection by using os.dup2
+  to redirect file descriptors without spawning a proper TTY at the auditd level.
+references:
+  - https://attack.mitre.org/techniques/T1059/004/
+author: k0r4y
+date: 2026-06-23
+tags:
+  - attack.execution
+  - attack.t1059.004
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    type: EXECVE
+    key: audit-wazuh-execution
+  python_interpreter:
+    a0|contains:
+      - 'python3'
+      - 'python'
+  reverse_shell_indicators:
+    a2|contains:
+      - 'socket'
+      - '/dev/tcp'
+      - 'subprocess'
+      - 'os.dup2'
+  condition: selection and python_interpreter and reverse_shell_indicators
+falsepositives:
+  - Legitimate Python scripts using socket connections
+  - Development and testing of network applications
+  - Monitoring scripts that use socket connections
+level: critical
