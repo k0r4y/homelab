@@ -1,0 +1,6 @@
+- name: Deploy Monitoring Configuration Only
+  hosts: mgmt01
+  connection: local
+  become: true
+  roles:
+    - role: monitoring

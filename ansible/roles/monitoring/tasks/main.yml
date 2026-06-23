@@ -54,13 +54,12 @@
 
 - name: Create Loki rules directory
   ansible.builtin.file:
-    path: "{{ monitoring_dir }}/rules/homelab"
+    path: "{{ monitoring_dir }}/rules/{{ loki_tenant_id }}"
     state: directory
     mode: "0755"
 
-- name: Deploy Loki ruler rules
+- name: Copy Loki rules
   ansible.builtin.copy:
-    src: "{{ playbook_dir }}/../monitoring/loki/rules/"
-    dest: "{{ monitoring_dir }}/rules/homelab/"
+    src: "{{ playbook_dir }}/../../monitoring/loki/rules/"
+    dest: "{{ monitoring_dir }}/rules/{{ loki_tenant_id }}/"
     mode: "0644"
-  notify: Restart monitoring stack
