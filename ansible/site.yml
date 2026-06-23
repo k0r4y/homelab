@@ -35,3 +35,10 @@
   roles:
     - common
     - monitoring
+
+- name: Configure target (target01)
+  hosts: target01
+  become: true
+  roles:
+    - target
+    - wazuh_agent
