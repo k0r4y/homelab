@@ -21,3 +21,11 @@
 - name: Set timezone to Amsterdam
   community.general.timezone:
     name: Europe/Amsterdam
+
+- name: Speed up boot by disabling network wait timeout
+  ansible.builtin.lineinfile:
+    path: /etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service
+    regexp: '^TimeoutStartSec='
+    line: 'TimeoutStartSec=10'
+    create: false
+  ignore_errors: true
