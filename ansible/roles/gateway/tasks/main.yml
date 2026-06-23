@@ -1,6 +1,5 @@
 ---
 # Gateway/Firewall role - Configures fw01 as NAT gateway and firewall
-
 - name: Install nftables
   ansible.builtin.apt:
     name: nftables
@@ -74,3 +73,39 @@
       - net-tools
       - dnsutils
     state: present
+
+# ---- IP CHANGE (LAST STEP) ----
+- name: Remove golden image netplan config (50-cloud-init)
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
+
+- name: Remove golden image netplan config (00-installer-config)
+  ansible.builtin.file:
+    path: /etc/netplan/00-installer-config.yaml
+    state: absent
+
+- name: Write netplan configuration for both interfaces
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: /etc/netplan/50-fw01.yaml
+    mode: "0600"
+
+- name: Disable cloud-init network config
+  ansible.builtin.file:
+    path: /etc/cloud/cloud-init.disabled
+    state: touch
+    mode: "0644"
+
+- name: Remove ip= parameter from GRUB
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: ' ip=[^ ]*'
+    replace: ''
+  notify: update grub
+
+- name: Schedule reboot to finalize network and GRUB changes
+  ansible.builtin.command: shutdown -r +1
+  async: 0
+  poll: 0
+  ignore_errors: true

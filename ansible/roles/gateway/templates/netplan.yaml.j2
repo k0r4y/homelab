@@ -1,12 +1,111 @@
-network:
-  version: 2
-  ethernets:
-    {{ target_interface | default('eth0') }}:
-      dhcp4: false
-      addresses:
-        - {{ target_ip }}/{{ target_netmask | default('24') }}
-      routes:
-        - to: default
-          via: {{ target_gateway }}
-      nameservers:
-        addresses: [8.8.8.8, 1.1.1.1]
+---
+# Gateway/Firewall role - Configures fw01 as NAT gateway and firewall
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
+
+- name: Enable IP forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+  notify: restart nftables
+
+- name: Create nftables config directory
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy nftables main configuration
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nftables
+
+- name: Deploy nftables service override
+  ansible.builtin.template:
+    src: nftables.service.j2
+    dest: /etc/systemd/system/nftables.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nftables
+
+- name: Ensure nftables service is enabled and running
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started
+    daemon_reload: true
+    masked: false
+
+- name: Apply nftables ruleset
+  ansible.builtin.command:
+    cmd: nft -f /etc/nftables.conf
+  changed_when: false
+  register: nft_apply
+  failed_when: nft_apply.rc != 0
+
+- name: Show nftables ruleset for verification
+  ansible.builtin.command:
+    cmd: nft list ruleset
+  register: nft_ruleset
+  changed_when: false
+
+- name: Display nftables rules
+  ansible.builtin.debug:
+    msg: "{{ nft_ruleset.stdout_lines }}"
+
+- name: Install network troubleshooting tools
+  ansible.builtin.apt:
+    name:
+      - tcpdump
+      - traceroute
+      - net-tools
+      - dnsutils
+    state: present
+
+# ---- IP CHANGE (LAST STEP) ----
+- name: Remove golden image netplan config (50-cloud-init)
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
+
+- name: Remove golden image netplan config (00-installer-config)
+  ansible.builtin.file:
+    path: /etc/netplan/00-installer-config.yaml
+    state: absent
+
+- name: Write netplan configuration for both interfaces
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: /etc/netplan/50-fw01.yaml
+    mode: "0600"
+
+- name: Disable cloud-init network config
+  ansible.builtin.file:
+    path: /etc/cloud/cloud-init.disabled
+    state: touch
+    mode: "0644"
+
+- name: Remove ip= parameter from GRUB
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: ' ip=[^ ]*'
+    replace: ''
+  notify: update grub
+
+- name: Schedule reboot to finalize network and GRUB changes
+  ansible.builtin.command: shutdown -r +1
+  async: 0
+  poll: 0
+  ignore_errors: true

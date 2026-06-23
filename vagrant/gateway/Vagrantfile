@@ -1,71 +1,111 @@
-# -*- mode: ruby -*-
-# vi: set ft=ruby :
+---
+# Gateway/Firewall role - Configures fw01 as NAT gateway and firewall
+- name: Install nftables
+  ansible.builtin.apt:
+    name: nftables
+    state: present
 
-Vagrant.configure("2") do |config|
-  config.vm.box = "golden-ubuntu"
-  config.vm.box_check_update = false
-  config.vm.hostname = "fw01"
+- name: Enable IP forwarding
+  ansible.builtin.sysctl:
+    name: net.ipv4.ip_forward
+    value: "1"
+    sysctl_set: true
+    state: present
+    reload: true
+  notify: restart nftables
 
-  config.ssh.username = "ansible"
-  config.ssh.password = "ansible"
+- name: Create nftables config directory
+  ansible.builtin.file:
+    path: /etc/nftables.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
 
-  config.vm.provider "hyperv" do |h|
-    h.vmname = "fw01"
-    h.memory = 1024
-    h.cpus = 1
-    h.enable_virtualization_extensions = false
-    h.linked_clone = false
-  end
+- name: Deploy nftables main configuration
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nftables
 
-  config.vm.network "public_network", bridge: "External Switch VMs"
-  config.vm.network "private_network", ip: "10.10.10.1", virtual_switch_name: "Lab-Internal"
+- name: Deploy nftables service override
+  ansible.builtin.template:
+    src: nftables.service.j2
+    dest: /etc/systemd/system/nftables.service.d/override.conf
+    owner: root
+    group: root
+    mode: "0644"
+  notify: restart nftables
 
-  config.vm.provision "shell" do |shell|
-    shell.privileged = true
-    shell.env = {
-      "ANSIBLE_VAULT_PASSWORD" => ENV['ANSIBLE_VAULT_PASSWORD'] || ""
-    }
-    shell.inline = <<-SHELL
-      #!/bin/bash
-      set -e
+- name: Ensure nftables service is enabled and running
+  ansible.builtin.systemd:
+    name: nftables
+    enabled: true
+    state: started
+    daemon_reload: true
+    masked: false
 
-      if ! id -u ansible &>/dev/null; then
-        useradd -m -s /bin/bash ansible
-        echo "ansible:ansible" | chpasswd
-        echo "ansible ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/ansible
-      fi
+- name: Apply nftables ruleset
+  ansible.builtin.command:
+    cmd: nft -f /etc/nftables.conf
+  changed_when: false
+  register: nft_apply
+  failed_when: nft_apply.rc != 0
 
-      if [ -z "$ANSIBLE_VAULT_PASSWORD" ]; then
-        echo "❌ ANSIBLE_VAULT_PASSWORD environment variable is not set."
-        exit 1
-      fi
+- name: Show nftables ruleset for verification
+  ansible.builtin.command:
+    cmd: nft list ruleset
+  register: nft_ruleset
+  changed_when: false
 
-      apt-get update -qq
-      apt-get install -y -qq git ansible
+- name: Display nftables rules
+  ansible.builtin.debug:
+    msg: "{{ nft_ruleset.stdout_lines }}"
 
-      REPO_DIR="/opt/homelab"
-      if [ -d "$REPO_DIR" ]; then
-        cd "$REPO_DIR" && git pull
-      else
-        git clone https://github.com/k0r4y/homelab.git "$REPO_DIR"
-      fi
-      chown -R ansible:ansible "$REPO_DIR"
+- name: Install network troubleshooting tools
+  ansible.builtin.apt:
+    name:
+      - tcpdump
+      - traceroute
+      - net-tools
+      - dnsutils
+    state: present
 
-      VAULT_FILE="$REPO_DIR/.vault_pass"
-      echo "$ANSIBLE_VAULT_PASSWORD" > "$VAULT_FILE"
-      chmod 600 "$VAULT_FILE"
+# ---- IP CHANGE (LAST STEP) ----
+- name: Remove golden image netplan config (50-cloud-init)
+  ansible.builtin.file:
+    path: /etc/netplan/50-cloud-init.yaml
+    state: absent
 
-      cd "$REPO_DIR/ansible"
-      ansible-playbook site.yml \
-        --inventory inventories/hosts \
-        --limit fw01 \
-        --connection local \
-        --become \
-        --vault-password-file "$VAULT_FILE" \
-        --extra-vars "target_ip=192.168.178.33 target_gateway=192.168.178.1 target_netmask=24 target_interface=eth0"
+- name: Remove golden image netplan config (00-installer-config)
+  ansible.builtin.file:
+    path: /etc/netplan/00-installer-config.yaml
+    state: absent
 
-      shred -u "$VAULT_FILE" 2>/dev/null || true
-      echo "✅ fw01 provisioning complete."
-    SHELL
-  end
-end
+- name: Write netplan configuration for both interfaces
+  ansible.builtin.template:
+    src: netplan.yaml.j2
+    dest: /etc/netplan/50-fw01.yaml
+    mode: "0600"
+
+- name: Disable cloud-init network config
+  ansible.builtin.file:
+    path: /etc/cloud/cloud-init.disabled
+    state: touch
+    mode: "0644"
+
+- name: Remove ip= parameter from GRUB
+  ansible.builtin.replace:
+    path: /etc/default/grub
+    regexp: ' ip=[^ ]*'
+    replace: ''
+  notify: update grub
+
+- name: Schedule reboot to finalize network and GRUB changes
+  ansible.builtin.command: shutdown -r +1
+  async: 0
+  poll: 0
+  ignore_errors: true
