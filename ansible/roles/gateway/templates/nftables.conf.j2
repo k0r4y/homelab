@@ -76,6 +76,12 @@ table inet attack_filter {
         # Allow established connections
         ct state established,related accept
 
+        # Allow attack zone agents to reach Wazuh manager on node03 (agent comms + enrollment)
+        # Wazuh uses 1514/tcp for agent communication and 1515/tcp for agent enrollment
+        # This must come before the general internet rule to make intent clear
+        iifname "{{ gateway_attack_interface | default('eth1') }}" oifname "{{ gateway_wan_interface | default('eth0') }}" \
+            ip daddr 192.168.178.28 tcp dport { 1514, 1515 } accept
+
         # Allow attack zone to access internet via WAN
         iifname "{{ gateway_attack_interface | default('eth1') }}" oifname "{{ gateway_wan_interface | default('eth0') }}" accept
 

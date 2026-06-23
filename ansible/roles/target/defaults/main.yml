@@ -6,8 +6,8 @@ target_netmask: "24"
 target_nameservers:
   - "8.8.8.8"
   - "1.1.1.1"
-target_interface: "eth0"
-target_enable_vulnerable_services: false
+target_interface: "eth1"
+target_enable_vulnerable_services: true
 
 # Base packages to install on all target VMs
 target_base_packages:
