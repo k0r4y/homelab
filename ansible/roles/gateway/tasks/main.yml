@@ -1,52 +1,11 @@
----
-# Gateway/Firewall role - Configures fw01 as NAT gateway and firewall
-- name: Install nftables
-  ansible.builtin.apt:
-    name: nftables
-    state: present
-
-- name: Enable IP forwarding
-  ansible.builtin.sysctl:
+# (Assuming line 9 was your sysctl task, updated to ansible.posix)
+- name: Enable IP forwarding in sysctl
+  ansible.posix.sysctl:
     name: net.ipv4.ip_forward
-    value: "1"
+    value: '1'
     sysctl_set: true
     state: present
     reload: true
-  notify: restart nftables
-
-- name: Create nftables config directory
-  ansible.builtin.file:
-    path: /etc/nftables.d
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Deploy nftables main configuration
-  ansible.builtin.template:
-    src: nftables.conf.j2
-    dest: /etc/nftables.conf
-    owner: root
-    group: root
-    mode: "0644"
-  notify: restart nftables
-
-- name: Create nftables service override directory
-  ansible.builtin.file:
-    path: /etc/systemd/system/nftables.service.d
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-- name: Deploy nftables service override
-  ansible.builtin.template:
-    src: nftables.service.j2
-    dest: /etc/systemd/system/nftables.service.d/override.conf
-    owner: root
-    group: root
-    mode: "0644"
-  notify: restart nftables
 
 - name: Ensure nftables service is enabled and running
   ansible.builtin.systemd:
@@ -60,18 +19,18 @@
   ansible.builtin.command:
     cmd: nft -f /etc/nftables.conf
   changed_when: false
-  register: nft_apply
-  failed_when: nft_apply.rc != 0
+  register: gateway_nft_apply
+  failed_when: gateway_nft_apply.rc != 0
 
 - name: Show nftables ruleset for verification
   ansible.builtin.command:
     cmd: nft list ruleset
-  register: nft_ruleset
+  register: gateway_nft_ruleset
   changed_when: false
 
 - name: Display nftables rules
   ansible.builtin.debug:
-    msg: "{{ nft_ruleset.stdout_lines }}"
+    msg: "{{ gateway_nft_ruleset.stdout_lines }}"
 
 - name: Install network troubleshooting tools
   ansible.builtin.apt:
@@ -112,8 +71,7 @@
     replace: ''
   notify: update grub
 
-- name: Schedule reboot to finalize network and GRUB changes
-  ansible.builtin.command: shutdown -r +1
-  async: 0
-  poll: 0
-  ignore_errors: true
+# Replaced command + shutdown with the native, safe reboot module
+- name: Reboot the gateway immediately to finalize network and GRUB changes
+  ansible.builtin.reboot:
+    reboot_timeout: 300
