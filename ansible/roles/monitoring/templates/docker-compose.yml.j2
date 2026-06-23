@@ -7,7 +7,6 @@ services:
       - "9090:9090"
     volumes:
       - {{ monitoring_dir }}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -16,10 +15,7 @@ services:
       - "3000:3000"
     volumes:
       - grafana_data:/var/lib/grafana
-    volumes:
-      - {{ monitoring_dir }}/loki-config.yaml:/etc/loki/local-config.yaml
-      - {{ monitoring_loki_data_dir }}:/loki  - /opt/monitoring/grafana/provisioning:/etc/grafana/provisioning
-
+      - {{ monitoring_dir }}/grafana/provisioning:/etc/grafana/provisioning
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
     container_name: cadvisor
@@ -32,7 +28,6 @@ services:
       - /var/run:/var/run:rw
       - /sys:/sys:ro
       - /var/lib/docker:/var/lib/docker:ro
-
   loki:
     image: grafana/loki:3.0.0
     container_name: loki
@@ -44,6 +39,5 @@ services:
       - {{ monitoring_loki_data_dir }}:/loki
       - {{ monitoring_dir }}/rules:/loki/rules
     command: -config.file=/etc/loki/local-config.yaml
-
 volumes:
   grafana_data:
