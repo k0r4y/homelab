@@ -1,0 +1,5 @@
+---
+target_ip: "10.10.10.30"
+target_gateway: "10.10.10.1"
+target_netmask: "24"
+target_interface: "eth1"

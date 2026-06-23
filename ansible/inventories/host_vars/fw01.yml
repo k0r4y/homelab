@@ -1,0 +1,6 @@
+---
+gateway_external_ip: "192.168.178.33"
+gateway_external_gw: "192.168.178.1"
+gateway_external_netmask: "24"
+gateway_internal_ip: "10.10.10.1"
+gateway_internal_netmask: "24"
