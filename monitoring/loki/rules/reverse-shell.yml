@@ -1,0 +1,15 @@
+groups:
+  - name: T1059.004-reverse-shell
+    rules:
+      - alert: InteractiveReverseShell
+        expr: |
+          count_over_time(
+            {job=~".+"} |= "audit-wazuh-execution" |= "pts" [5m]
+          ) > 0
+        for: 0m
+        labels:
+          severity: critical
+          mitre: T1059.004
+        annotations:
+          summary: Interactive reverse shell detected
+          description: Interactive process execution via auditd detected on {{ $labels.host }}

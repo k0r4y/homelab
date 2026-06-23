@@ -1,0 +1,17 @@
+groups:
+  - name: T1110.001-ssh-brute-force
+    rules:
+      - alert: SSHBruteForce
+        expr: |
+          sum by (host) (
+            count_over_time(
+              {job=~".+"} |= "Failed password" [60s]
+            )
+          ) > 8
+        for: 0m
+        labels:
+          severity: high
+          mitre: T1110.001
+        annotations:
+          summary: SSH brute force detected
+          description: More than 8 failed SSH password attempts in 60 seconds on {{ $labels.host }}

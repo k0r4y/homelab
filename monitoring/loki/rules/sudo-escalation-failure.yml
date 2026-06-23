@@ -1,0 +1,15 @@
+groups:
+  - name: T1548.003-sudo-escalation-failure
+    rules:
+      - alert: SudoEscalationFailure
+        expr: |
+          count_over_time(
+            {job=~".+"} |= "incorrect password attempts" [5m]
+          ) > 0
+        for: 0m
+        labels:
+          severity: high
+          mitre: T1548.003
+        annotations:
+          summary: Sudo privilege escalation failure detected
+          description: A user failed sudo authentication three times on {{ $labels.host }}
