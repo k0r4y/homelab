@@ -20,3 +20,12 @@
       ansible.builtin.command:
         cmd: /tmp/wazuh-install.sh --wazuh-indexer node-1 --wazuh-server wazuh-1 --wazuh-dashboard dashboard --start-cluster
         creates: /var/ossec/bin/wazuh-control
+
+    - name: Ensure wazuh-indexer log directory is managed by systemd-tmpfiles
+      ansible.builtin.copy:
+        content: "d /var/log/wazuh-indexer 0750 wazuh-indexer wazuh-indexer -"
+        dest: /etc/tmpfiles.d/wazuh-indexer.conf
+        owner: root
+        group: root
+        mode: "0644"
+

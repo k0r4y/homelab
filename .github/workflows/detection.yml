@@ -1,0 +1,114 @@
+name: Detection Pipeline
+
+# Triggers on pushes to main that touch Sigma rules or this workflow file.
+# Also runs on pull requests touching Sigma rules — validates before merge,
+# but does not deploy (deploy job is push-only).
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'detections/sigma/**'
+      - '.github/workflows/detection.yml'
+  pull_request:
+    paths:
+      - 'detections/sigma/**'
+
+jobs:
+  validate-and-convert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          # Loki backend requires 3.11+
+          python-version: '3.11'
+
+      - name: Install Sigma CLI and Loki backend
+        run: |
+          # sigma-cli is the Sigma rule validator and converter.
+          # pySigma-backend-loki adds the Loki/LogQL conversion target.
+          # There is no official Wazuh backend, so we target Loki instead
+          # and deploy rules as Loki ruler YAML files.
+          pip install sigma-cli pySigma-backend-loki
+
+      - name: Validate Sigma rule syntax
+        run: |
+          # Fails the pipeline if any rule has invalid syntax or missing required fields.
+          # This is the gate — no broken rule reaches production.
+          sigma check detections/sigma/
+
+      - name: Convert Sigma rules to Loki LogQL
+        run: |
+          # Converts each Sigma rule to a LogQL query and saves it to detections/loki/.
+          # These files are the compiled output — never edit them manually.
+          # The Sigma rule in detections/sigma/ is always the source of truth.
+          mkdir -p detections/loki
+          for rule in detections/sigma/*.yml; do
+            name=$(basename "$rule" .yml)
+            sigma convert -t loki "$rule" > "detections/loki/${name}.logql"
+            echo "Converted: $name"
+          done
+
+      - name: Upload compiled rules artifact
+        # Passes the compiled LogQL files to the deploy job without re-running conversion.
+        # Also makes them downloadable from the GitHub Actions UI for debugging.
+        uses: actions/upload-artifact@v4
+        with:
+          name: compiled-loki-rules
+          path: detections/loki/
+
+  deploy-rules:
+    needs: validate-and-convert
+    # Only deploy on push to main — never on pull requests.
+    # This ensures only reviewed and merged rules reach the live environment.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Download compiled rules
+        # Retrieves the LogQL files produced by the validate-and-convert job.
+        uses: actions/download-artifact@v4
+        with:
+          name: compiled-loki-rules
+          path: detections/loki/
+
+      - name: Connect to Tailscale
+        # The GitHub Actions runner is on the public internet.
+        # Tailscale creates a secure tunnel to the homelab network so the runner
+        # can reach mgmt01 at its Tailscale IP without exposing SSH publicly.
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          # Must match the tag configured in the Tailscale ACL for CI runners.
+          tags: tag:ci
+
+      - name: Copy Loki ruler rules to mgmt01
+        run: |
+          # Write the SSH private key from GitHub Secrets to a temp file.
+          # This is the ansible user's key — scoped to mgmt01 only.
+          mkdir -p ~/.ssh
+          echo "${{ secrets.MGMT01_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          # Copy the Loki ruler YAML files (not the LogQL files) to mgmt01.
+          # Loki reads ruler rules from /opt/monitoring/rules/homelab/ at runtime.
+          # The homelab subdirectory is required by Loki's ruler directory structure.
+          scp -o StrictHostKeyChecking=no \
+            monitoring/loki/rules/*.yml \
+            ansible@100.77.206.37:/opt/monitoring/rules/homelab/
+
+      - name: Reload Loki to apply new rules
+        run: |
+          # Restarting the Loki container forces it to re-read the rules directory.
+          # Loki does not support hot-reload of ruler rules — restart is required.
+          ssh -o StrictHostKeyChecking=no \
+            -i ~/.ssh/id_ed25519 \
+            ansible@100.77.206.37 \
+            "docker restart loki"
