@@ -20,7 +20,7 @@
   ansible.builtin.replace:
     path: /var/ossec/etc/ossec.conf
     regexp: '<address>MANAGER_IP</address>'
-    replace: '<address>{{ wazuh_manager_ip }}</address>'
+    replace: '<address>{{ wazuh_agent_manager_ip }}</address>'
   notify: restart wazuh-agent
 
 - name: Remove temporary .deb file
@@ -37,6 +37,6 @@
 - name: Verify agent is active
   ansible.builtin.systemd:
     name: wazuh-agent
-  register: agent_status
+  register: wazuh_agent_status
   changed_when: false
-  failed_when: agent_status.status.ActiveState != "active"
+  failed_when: wazuh_agent_status.status.ActiveState != "active"
