@@ -16,8 +16,8 @@
 - name: Update /etc/hosts
   ansible.builtin.lineinfile:
     path: /etc/hosts
-    regexp: '^127\.0\.1\.1'
-    line: "127.0.1.1 {{ inventory_hostname }}"
+    regexp: ^127\.0\.1\.1
+    line: 127.0.1.1 {{ inventory_hostname }}
 
 - name: Ensure ansible user has SSH access
   ansible.builtin.import_tasks: ssh.yml
@@ -46,7 +46,7 @@
 
 - name: Clear loop variable before netplan
   ansible.builtin.set_fact:
-    item: null
+    item:
 
 - name: Write netplan configuration for static IP
   ansible.builtin.template:
@@ -64,12 +64,10 @@
 - name: Remove ip= parameter from GRUB
   ansible.builtin.replace:
     path: /etc/default/grub
-    regexp: ' ip=[^ ]*'
-    replace: ''
+    regexp: " ip=[^ ]*"
+    replace: ""
   notify: update grub
 
-- name: Schedule reboot to finalize network and GRUB changes
-  ansible.builtin.command: shutdown -r +1
-  async: 0
-  poll: 0
-  ignore_errors: true
+- name: Reboot to finalize network and GRUB changes
+  ansible.builtin.reboot:
+    reboot_timeout: 300

@@ -1,5 +1,5 @@
 ---
-- name: apply netplan
+- name: Apply netplan
   ansible.builtin.command:
     cmd: netplan apply
   changed_when: false

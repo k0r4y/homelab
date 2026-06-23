@@ -1,7 +1,7 @@
 ---
 - name: Ensure ansible user home directory
   ansible.builtin.file:
-    path: "/home/{{ target_ansible_user }}"
+    path: /home/{{ target_ansible_user }}
     state: directory
     owner: "{{ target_ansible_user }}"
     group: "{{ target_ansible_user }}"
@@ -9,7 +9,7 @@
 
 - name: Ensure .ssh directory exists
   ansible.builtin.file:
-    path: "/home/{{ target_ansible_user }}/.ssh"
+    path: /home/{{ target_ansible_user }}/.ssh
     state: directory
     owner: "{{ target_ansible_user }}"
     group: "{{ target_ansible_user }}"
@@ -18,7 +18,7 @@
 - name: Copy SSH authorized_keys
   ansible.builtin.copy:
     src: "{{ target_authorized_keys_file | default('/root/.ssh/authorized_keys') }}"
-    dest: "/home/{{ target_ansible_user }}/.ssh/authorized_keys"
+    dest: /home/{{ target_ansible_user }}/.ssh/authorized_keys
     owner: "{{ target_ansible_user }}"
     group: "{{ target_ansible_user }}"
     mode: "0600"
@@ -27,7 +27,7 @@
 
 - name: Ensure sudoers entry
   ansible.builtin.lineinfile:
-    path: "/etc/sudoers.d/{{ target_ansible_user }}"
+    path: /etc/sudoers.d/{{ target_ansible_user }}
     line: "{{ target_ansible_user }} ALL=(ALL) NOPASSWD:ALL"
     create: true
     mode: "0440"

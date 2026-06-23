@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: Run gateway configuration tests on localhost
+  hosts: localhost
   remote_user: root
   roles:
     - gateway

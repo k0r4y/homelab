@@ -1,13 +1,14 @@
 ---
-- name: netplan apply
+- name: Netplan apply
   ansible.builtin.command: netplan apply
   changed_when: false
 
-- name: restart ssh
+- name: Restart ssh
   ansible.builtin.systemd:
     name: ssh
     state: restarted
 
-- name: update grub
+- name: Update grub
   ansible.builtin.command: update-grub
+  changed_when: true
   listen: "update grub"
