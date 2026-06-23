@@ -31,6 +31,14 @@
     mode: "0644"
   notify: restart nftables
 
+- name: Create nftables service override directory
+  ansible.builtin.file:
+    path: /etc/systemd/system/nftables.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Deploy nftables service override
   ansible.builtin.template:
     src: nftables.service.j2
