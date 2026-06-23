@@ -1,0 +1,25 @@
+title: Sudo Privilege Escalation Failure
+id: b9e4c3d2-5e6f-7a8b-9c0d-1e2f3a4b5c6d
+status: stable
+description: Detects three consecutive failed sudo password attempts in a single
+  invocation, indicating an attacker probing privilege escalation paths after
+  gaining initial access.
+references:
+  - https://attack.mitre.org/techniques/T1548/003/
+author: k0r4y
+date: 2026-06-20
+tags:
+  - attack.privilege_escalation
+  - attack.defense_evasion
+  - attack.t1548.003
+logsource:
+  product: linux
+  service: sudo
+detection:
+  selection:
+    body|contains: 'incorrect password attempts'
+  condition: selection
+falsepositives:
+  - Legitimate users mistyping their sudo password three times
+  - Admins fat-fingering credentials during routine work
+level: high

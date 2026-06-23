@@ -1,0 +1,28 @@
+title: Interactive Reverse Shell via Unix Shell
+id: c0f5d4e3-6f7a-8b9c-0d1e-2f3a4b5c6d7e
+status: stable
+description: Detects interactive process execution via auditd execve syscall capture
+  with a TTY assigned. Filters out headless automated processes (no TTY) to reduce
+  false positives from cluster automation such as K3s/Flannel.
+references:
+  - https://attack.mitre.org/techniques/T1059/004/
+author: k0r4y
+date: 2026-06-20
+tags:
+  - attack.execution
+  - attack.t1059.004
+logsource:
+  product: linux
+  service: auditd
+detection:
+  selection:
+    type: SYSCALL
+    syscall: execve
+    key: audit-wazuh-execution
+  filter_headless:
+    tty: '(none)'
+  condition: selection and not filter_headless
+falsepositives:
+  - Legitimate admin sessions on nodes where interactive login is expected
+  - Allowlist known admin usernames and expected commands if noise is high
+level: critical
