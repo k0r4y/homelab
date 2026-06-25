@@ -1,6 +1,9 @@
+## Project is paused to study more instead of doing practical work with the technologies used in the project to strengthen the knowledge I have learned.
+
+
 # SoC Homelab as code.
 
-A production-grade cybersecurity lab built on Hyper-V, designed around DevSecOps and everything-as-code principles. The environment supports a full purple team workflow — infrastructure automation, container orchestration, SIEM, log-based detection, and an isolated attack range  built to the standard of a small security operations team.
+A cybersecurity lab built on Hyper-V, designed around DevSecOps and everything-as-code principles. The environment supports a full purple team workflow, infrastructure automation, container orchestration, SIEM, log-based detection, and an isolated attack range  built to the standard of a small security operations team.
 
 ---
 
